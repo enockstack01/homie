@@ -1,0 +1,42 @@
+## .NET / Visual Studio
+bin/
+obj/
+*.user
+.vs/
+*.suo
+
+## ArcGIS Pro Add-in packaging output
+*.esriAddinX
+dist/
+
+## Local logs / audit trail (never commit runtime data)
+**/logs/
+*.log
+
+## Secrets - never commit API keys or credentials
+.env
+.env.local
+.env.*.local
+*.pfx
+appsettings.local.json
+
+## Python backend
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+*.pyc
+
+## Node / Next.js
+node_modules/
+.next/
+
+## OS cruft
+Thumbs.db
+Desktop.ini
+
+## Local scratch/test artifacts (screenshots, ad-hoc scripts) - never part of the product
+.scratch/
+
+## Claude Code local machine settings (allowlists tied to this machine's paths)
+.claude/settings.local.json

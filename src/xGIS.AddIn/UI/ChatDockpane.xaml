@@ -1,0 +1,89 @@
+<UserControl x:Class="xGIS.AddIn.UI.ChatDockpane"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:chat="clr-namespace:xGIS.AddIn.Chat"
+             xmlns:sys="clr-namespace:System.Windows.Controls;assembly=PresentationFramework"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="360">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/ArcGIS.Desktop.Framework;component\Themes\Default.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <SolidColorBrush x:Key="xGIS.User.Background" Color="#2962FF" />
+            <SolidColorBrush x:Key="xGIS.Assistant.Background" Color="#3A3D41" />
+            <SolidColorBrush x:Key="xGIS.Status.Foreground" Color="#9AA0A6" />
+            <SolidColorBrush x:Key="xGIS.Error.Foreground" Color="#E06666" />
+            <sys:BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+            <DataTemplate DataType="{x:Type chat:ChatMessage}">
+                <Border Margin="4" Padding="8" CornerRadius="6">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{StaticResource xGIS.Assistant.Background}" />
+                            <Setter Property="HorizontalAlignment" Value="Left" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Role}" Value="User">
+                                    <Setter Property="Background" Value="{StaticResource xGIS.User.Background}" />
+                                    <Setter Property="HorizontalAlignment" Value="Right" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MaxWidth="300" Foreground="White">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Role}" Value="Status">
+                                        <Setter Property="Foreground" Value="{StaticResource xGIS.Status.Foreground}" />
+                                        <Setter Property="FontStyle" Value="Italic" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Role}" Value="Error">
+                                        <Setter Property="Foreground" Value="{StaticResource xGIS.Error.Foreground}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding History}" />
+        </ScrollViewer>
+
+        <Grid Grid.Row="1" Margin="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="InputBox" Grid.Column="0" VerticalAlignment="Center"
+                     Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="False" MaxLines="3" TextWrapping="Wrap"
+                     ToolTip="Describe what you want to do, e.g. 'buffer the roads layer by 500 meters'">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Return" Command="{Binding SendCommand}" />
+                </TextBox.InputBindings>
+            </TextBox>
+
+            <Button Grid.Column="1" Content="Send" Margin="6,0,0,0" Padding="10,4"
+                    Command="{Binding SendCommand}" />
+
+            <Button Grid.Column="2" Content="Stop" Margin="6,0,0,0" Padding="10,4"
+                    Command="{Binding StopCommand}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+        </Grid>
+    </Grid>
+</UserControl>

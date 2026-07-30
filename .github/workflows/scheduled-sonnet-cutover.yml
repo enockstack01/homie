@@ -1,0 +1,41 @@
+name: scheduled-sonnet-cutover
+
+# Blueprint Section 9, step 6 (see docs/BLUEPRINT.md): flips Claude Sonnet 5 from its intro
+# rate to its standard rate on 2026-09-01. scripts/flip_sonnet_rate.py is idempotent (safe
+# to run more than once), so this fires once a year on Sept 1 rather than trying to model
+# a single one-time date in cron syntax - every run after the first is a harmless no-op
+# against an already-flipped model_pricing collection. Runs against the real database, so
+# it needs real secrets, not the pytest workflow's placeholders.
+#
+# workflow_dispatch is included so this can also be triggered by hand (e.g. to verify the
+# job actually reaches the database, or to run it early/late instead of waiting on cron).
+
+on:
+  schedule:
+    - cron: "0 0 1 9 *" # 00:00 UTC on Sept 1, every year
+  workflow_dispatch: {}
+
+jobs:
+  flip-rate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ENVIRONMENT: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Flip Sonnet 5 intro -> standard rate
+        run: python -m scripts.flip_sonnet_rate

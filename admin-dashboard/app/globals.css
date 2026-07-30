@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f7f9f8;
+  --foreground: #101914;
+  --border: #e2e8e4;
+
+  /* Runtime tokens (re-pointed per color-scheme below) - named differently from the
+     --color-* tokens @theme inline exposes to Tailwind, or those would self-reference. */
+  --primary: #005c3d; /* brand dark green */
+  --primary-hover: #009758; /* brand green */
+  --accent: #f8b712; /* brand golden yellow */
+  --accent-soft: #fef597; /* brand pale yellow */
+  --info: #073392; /* brand blue */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-info: var(--info);
+
+  /* Fixed brand hues (not color-scheme-dependent) for places that want the exact
+     brand color regardless of light/dark - e.g. a logo mark. */
+  --color-brand-dark-green: #005c3d;
+  --color-brand-green: #009758;
+  --color-brand-blue: #073392;
+  --color-brand-yellow: #f8b712;
+  --color-brand-pale-yellow: #fef597;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1210;
+    --surface: #101b17;
+    --surface-muted: #16221d;
+    --foreground: #eef5f1;
+    --border: #24352c;
+
+    /* Dark-mode-safe brand tints - the raw brand hues are tuned for white
+       backgrounds; lifted a shade so they hold contrast on near-black surfaces
+       instead of looking muddy. */
+    --primary: #17b579;
+    --primary-hover: #21cf8b;
+    --accent: #f8b712;
+    --accent-soft: #3a2f0c;
+    --info: #5b7fd6;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0b1210;
+  --surface: #101b17;
+  --surface-muted: #16221d;
+  --foreground: #eef5f1;
+  --border: #24352c;
+  --primary: #17b579;
+  --primary-hover: #21cf8b;
+  --accent: #f8b712;
+  --accent-soft: #3a2f0c;
+  --info: #5b7fd6;
+}
+
+:root[data-theme="light"] {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f7f9f8;
+  --foreground: #101914;
+  --border: #e2e8e4;
+  --primary: #005c3d;
+  --primary-hover: #009758;
+  --accent: #f8b712;
+  --accent-soft: #fef597;
+  --info: #073392;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: #000000;
+}

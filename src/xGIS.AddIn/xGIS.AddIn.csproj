@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>xGIS.AddIn</RootNamespace>
+    <AssemblyName>xGIS.AddIn</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Config.daml" />
+    <Content Include="Config.daml" />
+    <Content Include="Images\**\*" Condition="Exists('Images')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Properties\launchSettings.json" />
+  </ItemGroup>
+
+  <!--
+    Packages the .esriAddinX and wires up Config.daml validation; falls back to the
+    targets file shipped inside the local ArcGIS Pro install itself since (per Esri's own
+    community-samples projects) there is no NuGet-distributed equivalent for 3.x/.NET 8.
+  -->
+  <Import Project="$(ArcGISProInstallDir)bin\Esri.ProApp.SDK.Desktop.targets"
+          Condition="Exists('$(ArcGISProInstallDir)bin\Esri.ProApp.SDK.Desktop.targets') AND !Exists('Esri.ArcGISPro.Extensions.targets')" />
+
+</Project>

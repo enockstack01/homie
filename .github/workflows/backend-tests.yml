@@ -1,0 +1,48 @@
+name: backend-tests
+
+# Only backend/ (pure-Python, pytest) runs here. src/xGIS.AddIn's own test project
+# (xGIS.AddIn.Tests) deliberately isn't in this workflow: xGIS.AddIn.csproj can't be built
+# by `dotnet build`/`dotnet test` at all (the .esriAddinX packaging step uses
+# CodeTaskFactory, which only the full-framework MSBuild shipped inside Visual Studio
+# supports - see docs/SETUP.md), and it project-references the real ArcGIS Pro SDK's
+# locally-installed DLLs, which a GitHub-hosted runner has no way to provide. Running that
+# suite still requires a Windows dev machine with Visual Studio 2022 and ArcGIS Pro
+# installed, per docs/SETUP.md's "Running the unit tests from the CLI" section.
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Dummy values: tests use mongomock and mock the Clerk/Anthropic clients rather than
+      # hitting real services, but pydantic-settings' Settings model requires these fields
+      # to be present at all (see app/config.py) even when their value is never dialed out.
+      MONGODB_URI: mongodb://localhost:27017
+      MONGODB_DB_NAME: xgis_ci
+      CLERK_SECRET_KEY: sk_test_ci_placeholder
+      ANTHROPIC_API_KEY: sk-ant-ci-placeholder
+      ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: python -m pytest -v

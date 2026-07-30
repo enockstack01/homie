@@ -1,0 +1,22 @@
+<Window x:Class="xGIS.AddIn.UI.ConfirmationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="xGIS - Confirm action"
+        Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" FontWeight="Bold" Text="xGIS wants to run an operation that needs confirmation:" TextWrapping="Wrap" Margin="0,0,0,8" />
+        <TextBlock Grid.Row="1" x:Name="SummaryText" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Deny" Width="90" Margin="0,0,8,0" Click="Deny_Click" IsCancel="True" />
+            <Button Content="Allow" Width="90" Click="Allow_Click" IsDefault="True" />
+        </StackPanel>
+    </Grid>
+</Window>

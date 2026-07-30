@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArcGIS defaultAssembly="xGIS.AddIn.dll" defaultNamespace="xGIS.AddIn" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry http://Server/esri/tools/addinregistry/CurrentAddinConfiguration.xsd">
+  <AddInInfo id="{9113466a-6607-4ac3-a6f0-18f2829b89da}" version="0.1.0" desktopVersion="3.6.0">
+    <Name>xGIS</Name>
+    <Description>Type what you want to do in ArcGIS Pro; xGIS uses the power of agentic AI to carry it out.</Description>
+    <Image>Images\xGIS32.png</Image>
+    <Author>Enock Nshimiyimana</Author>
+    <Company>xGIS</Company>
+    <Date>07/21/2026</Date>
+    <Subject>Framework, Geoprocessing, Mapping</Subject>
+  </AddInInfo>
+  <modules>
+    <insertModule id="xGIS_Module" className="xGISModule" autoLoad="false" caption="xGIS">
+      <tabs>
+        <tab id="xGIS_Tab" caption="xGIS">
+          <group refID="xGIS_Group" />
+        </tab>
+      </tabs>
+      <groups>
+        <group id="xGIS_Group" caption="xGIS" appearsOnAddInTab="true">
+          <button refID="xGIS_ChatDockpane_ShowButton" size="large" />
+          <button refID="xGIS_Settings_ShowButton" size="large" />
+        </group>
+      </groups>
+      <controls>
+        <button id="xGIS_ChatDockpane_ShowButton" caption="xGIS Chat" className="UI.ChatDockpaneShowButton" loadOnClick="true" smallImage="Images\xGIS16.png" largeImage="Images\xGIS32.png">
+          <tooltip heading="Open xGIS Chat">
+            Describe what you want to do in plain English; xGIS carries it out in this project.
+            <disabledText />
+          </tooltip>
+        </button>
+        <button id="xGIS_Settings_ShowButton" caption="Settings" className="UI.SettingsShowButton" loadOnClick="true" smallImage="Images\xGISSettings16.png" largeImage="Images\xGISSettings32.png">
+          <tooltip heading="xGIS Settings">
+            Set your Anthropic API key, choose a model, and control the confirmation gate.
+            <disabledText />
+          </tooltip>
+        </button>
+      </controls>
+      <dockPanes>
+        <dockPane id="xGIS_ChatDockpane" caption="xGIS Chat" className="UI.ChatDockpaneViewModel" dock="group" dockWith="esri_core_contentsDockPane">
+          <content className="UI.ChatDockpane" />
+        </dockPane>
+      </dockPanes>
+    </insertModule>
+  </modules>
+</ArcGIS>
