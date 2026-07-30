@@ -102,6 +102,13 @@ download button (`admin-dashboard/lib/addinRelease.ts`) reads the latest Release
 GitHub's API and redirects users there, since the dashboard runs on Render, not this
 machine. Nobody gets a working download link until a Release with a `.zip` asset exists.
 
+**The zip must go in the "Attach binaries" drop zone, not the description box.** On
+GitHub's release editor, dropping a file into the Markdown description textarea uploads it
+as a `user-attachments` link in the release notes, not as a release *asset* — it's
+downloadable, but it won't show up in the API's `assets` array, which is what
+`addinRelease.ts` reads. There's a separate "Attach binaries by dropping them here or
+selecting them" area below the description box; the zip has to go there.
+
 ## xGIS API key
 
 The Add-in's Settings window stores a **Clerk Machine secret key** (`ak_...`) via
