@@ -53,7 +53,17 @@ $uninstallTemplate = Get-Content (Join-Path $templatesDir "Uninstall.bat") -Raw
 $uninstallTemplate.Replace("__ADDIN_ID__", $addinId) |
     Set-Content (Join-Path $distDir "Uninstall.bat") -NoNewline
 
+# Zipped as one file because this is also the artifact the admin dashboard offers for
+# download (see admin-dashboard/lib/addinRelease.ts) - it's published as a GitHub Release
+# asset rather than served from this dist/ folder directly, since the dashboard doesn't
+# necessarily run on this machine.
+$zipPath = Join-Path $repoRoot "dist\xGIS-$version-installer.zip"
+if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+Compress-Archive -Path (Join-Path $distDir "*") -DestinationPath $zipPath
+
 Write-Host ""
 Write-Host "Packaged xGIS $version -> $distDir" -ForegroundColor Green
-Write-Host "Hand the whole '$distDir' folder to anyone with ArcGIS Pro installed - see INSTALL.md inside it."
+Write-Host "Zipped for distribution -> $zipPath"
+Write-Host "Locally: hand the whole '$distDir' folder to anyone with ArcGIS Pro installed - see INSTALL.md inside it."
+Write-Host "For the dashboard: publish '$zipPath' as a GitHub Release (tag v$version) on this repo."
 Write-Host "Run Install.bat to silently register the add-in and launch ArcGIS Pro; Uninstall.bat to remove it."

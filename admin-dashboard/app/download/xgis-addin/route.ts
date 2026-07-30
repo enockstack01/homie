@@ -1,4 +1,3 @@
-import { ZipArchive } from "archiver";
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { findLatestAddinRelease } from "@/lib/addinRelease";
@@ -11,6 +10,10 @@ import type { Me } from "@/lib/types";
  * account shouldn't be able to fetch the installer just because they found this path,
  * even though the download *link* itself is already hidden from them on /member and
  * /org-admin.
+ *
+ * Redirects to the GitHub Release asset rather than proxying the zip's bytes through this
+ * server - the auth/status check above still gates whether a browser ever gets that
+ * redirect at all, and GitHub's CDN serves the actual download.
  */
 export async function GET() {
   const { userId } = await auth();
@@ -38,43 +41,10 @@ export async function GET() {
   const release = await findLatestAddinRelease();
   if (!release) {
     return new NextResponse(
-      "No Add-in build is available yet. Ask whoever runs the Homie platform to publish one (scripts/build-release.ps1).",
+      "No Add-in build is available yet. Ask whoever runs the Homie platform to publish one (scripts/build-release.ps1, then a GitHub Release).",
       { status: 404 },
     );
   }
 
-  // Bundle the esriAddinX with Install.bat/Uninstall.bat/INSTALL.md into one zip rather
-  // than shipping the bare .esriAddinX - Install.bat is what makes install actually
-  // one-click (silent RegisterAddIn.exe + relaunch ArcGIS Pro), not Esri's own
-  // click-through Add-In Installation Utility that opening the bare file triggers.
-  const zipBuffer = await buildReleaseZip(release);
-  const zipFileName = `xGIS-${release.version}-installer.zip`;
-
-  return new NextResponse(new Uint8Array(zipBuffer), {
-    headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${zipFileName}"`,
-      "Content-Length": String(zipBuffer.length),
-    },
-  });
-}
-
-async function buildReleaseZip(release: Awaited<ReturnType<typeof findLatestAddinRelease>>): Promise<Buffer> {
-  if (!release) throw new Error("release must not be null");
-
-  return new Promise<Buffer>((resolve, reject) => {
-    const archive = new ZipArchive({ zlib: { level: 9 } });
-    const chunks: Buffer[] = [];
-
-    archive.on("data", (chunk: Buffer) => chunks.push(chunk));
-    archive.on("error", reject);
-    archive.on("end", () => resolve(Buffer.concat(chunks)));
-
-    archive.file(release.filePath, { name: release.fileName });
-    if (release.installScriptPath) archive.file(release.installScriptPath, { name: "Install.bat" });
-    if (release.uninstallScriptPath) archive.file(release.uninstallScriptPath, { name: "Uninstall.bat" });
-    if (release.installMdPath) archive.file(release.installMdPath, { name: "INSTALL.md" });
-
-    archive.finalize();
-  });
+  return NextResponse.redirect(release.downloadUrl);
 }

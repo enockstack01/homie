@@ -96,6 +96,12 @@ Builds Release|x64 and copies the resulting `.esriAddinX` (plus `INSTALL.md`) in
 bump that when releasing. `dist/` is gitignored; hand the folder itself to whoever needs
 it (see `../INSTALL.md` for what they do with it).
 
+The script also zips those files into `dist\xGIS-<version>-installer.zip`. **Publish that
+zip as a GitHub Release on this repo, tagged `v<version>`** — the admin dashboard's
+download button (`admin-dashboard/lib/addinRelease.ts`) reads the latest Release via
+GitHub's API and redirects users there, since the dashboard runs on Render, not this
+machine. Nobody gets a working download link until a Release with a `.zip` asset exists.
+
 ## xGIS API key
 
 The Add-in's Settings window stores a **Clerk Machine secret key** (`ak_...`) via

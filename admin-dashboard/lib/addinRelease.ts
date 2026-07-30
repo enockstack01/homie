@@ -1,73 +1,50 @@
-import fs from "fs/promises";
-import path from "path";
-
 export interface AddinRelease {
   version: string;
-  filePath: string;
+  /** Direct GitHub Releases asset URL - the download route redirects here rather than
+   * proxying the bytes through this server. */
+  downloadUrl: string;
   fileName: string;
-  /** Present when scripts/build-release.ps1 emitted them alongside the .esriAddinX -
-   * silently registers the add-in and launches ArcGIS Pro / removes it, so the download
-   * route can bundle them into one zip instead of shipping the bare .esriAddinX. */
-  installScriptPath: string | null;
-  uninstallScriptPath: string | null;
-  /** Also copied by build-release.ps1; bundled into the zip purely as reference reading,
-   * not required for the install itself (Install.bat needs no docs to run). */
-  installMdPath: string | null;
 }
 
+const RELEASES_REPO = process.env.ADDIN_RELEASES_REPO || "enockstack01/homie";
+
 /**
- * Finds the ArcGIS Pro Add-in package that scripts/build-release.ps1 (in the repo root,
- * a sibling of this Next.js app) produces at dist/xGIS-<version>/xGIS.AddIn.esriAddinX.
- * Reading it from there directly - rather than copying it into this app's own tree -
- * means a fresh `build-release.ps1` run is immediately what gets served, no separate
- * sync step to forget.
+ * Finds the ArcGIS Pro Add-in installer by asking GitHub's Releases API for this repo's
+ * latest release, rather than reading a local `dist/` folder.
  *
- * This only works because, on this deployment, the Next.js app and the Add-in's build
- * output happen to live on the same Windows machine. A real multi-machine production
- * deployment (Next.js hosted separately from wherever MSBuild/ArcGIS Pro SDK runs) would
- * need to swap this for a proper artifact store (e.g. a release uploaded to cloud
- * storage) instead of a local relative path.
+ * Building the .esriAddinX requires the ArcGIS Pro SDK and full desktop MSBuild
+ * (scripts/build-release.ps1), which only ever runs on a Windows dev machine with ArcGIS
+ * Pro installed - never on wherever this Next.js app happens to be hosted. Once this app
+ * moved off that same Windows machine onto Render, a local relative path to `dist/` had
+ * nothing to read. GitHub Releases is the artifact store instead: publish
+ * `xGIS-<version>-installer.zip` (produced by build-release.ps1) as a Release asset on
+ * this repo, and this app just needs network access to github.com, no shared filesystem.
  */
 export async function findLatestAddinRelease(): Promise<AddinRelease | null> {
-  const distDir = path.join(process.cwd(), "..", "dist");
-
-  let entries: string[];
+  let response: Response;
   try {
-    entries = await fs.readdir(distDir);
+    response = await fetch(
+      `https://api.github.com/repos/${RELEASES_REPO}/releases/latest`,
+      { headers: { Accept: "application/vnd.github+json" }, next: { revalidate: 300 } },
+    );
   } catch {
     return null;
   }
 
-  const versionDirs = entries.filter((e) => e.startsWith("xGIS-")).sort().reverse();
-  for (const dir of versionDirs) {
-    const fileName = "xGIS.AddIn.esriAddinX";
-    const filePath = path.join(distDir, dir, fileName);
-    try {
-      await fs.access(filePath);
-    } catch {
-      continue;
-    }
-
-    const installScriptPath = path.join(distDir, dir, "Install.bat");
-    const uninstallScriptPath = path.join(distDir, dir, "Uninstall.bat");
-    const installMdPath = path.join(distDir, dir, "INSTALL.md");
-    return {
-      version: dir.replace(/^xGIS-/, ""),
-      filePath,
-      fileName,
-      installScriptPath: (await fileExists(installScriptPath)) ? installScriptPath : null,
-      uninstallScriptPath: (await fileExists(uninstallScriptPath)) ? uninstallScriptPath : null,
-      installMdPath: (await fileExists(installMdPath)) ? installMdPath : null,
-    };
+  if (!response.ok) {
+    // 404 means no release has been published yet - not an error, just nothing to offer.
+    return null;
   }
-  return null;
-}
 
-async function fileExists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
+  const release = await response.json();
+  const asset = (release.assets as Array<{ name: string; browser_download_url: string }>)?.find(
+    (a) => a.name.endsWith(".zip"),
+  );
+  if (!asset) return null;
+
+  return {
+    version: String(release.tag_name).replace(/^v/, ""),
+    downloadUrl: asset.browser_download_url,
+    fileName: asset.name,
+  };
 }

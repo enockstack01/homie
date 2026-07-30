@@ -132,11 +132,15 @@ client sends.
 the `.esriAddinX`, `INSTALL.md`, and two templated scripts (`scripts/installer-templates/`)
 - `Install.bat` (silently registers the add-in via `RegisterAddIn.exe /s` and relaunches
 ArcGIS Pro) and `Uninstall.bat` (keyed off `Config.daml`'s fixed add-in GUID, never
-hardcoded, so it can't drift out of sync). `admin-dashboard/lib/addinRelease.ts` reads that
-`dist/` folder directly (same-machine deployment only - see its own doc comment for what a
-real multi-machine deployment would need instead), and
-`app/download/xgis-addin/route.ts` bundles all four files into one zip so downloading and
-running `Install.bat` is the entire install step - no separate click-through installer.
+hardcoded, so it can't drift out of sync). The script also zips those four files into
+`dist/xGIS-<version>-installer.zip`, which gets published as a GitHub Release asset on this
+repo (tag `v<version>`) - `admin-dashboard/lib/addinRelease.ts` asks GitHub's Releases API
+for the latest one rather than reading a local `dist/` folder, since the dashboard doesn't
+necessarily run on the same machine the Add-in was built on (it's on Render; the build only
+ever runs on a Windows box with the ArcGIS Pro SDK). `app/download/xgis-addin/route.ts`
+redirects the browser straight to that asset URL after the auth/status gate passes, so
+downloading and running `Install.bat` is the entire install step - no separate
+click-through installer, and no zip bytes proxied through this server.
 This is gated on `status === "active"` in three places: `/member`, `/org-admin`, and
 `/super-admin/account` (every account type gets it once its own status allows spending),
 independently re-checked in the route itself so the dashboard's hiding the link is a

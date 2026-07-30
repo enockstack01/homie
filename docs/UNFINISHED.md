@@ -100,3 +100,13 @@ and serves that; `Install.bat` silently registers the add-in and relaunches ArcG
 running it is the entire install step. `AddinDownloadCard.tsx`'s instructions were updated
 to match. Verified: the zip's four files were checked directly with `unzip -l`, and the
 route builds against a real `dist/xGIS-0.1.0` produced by `scripts/build-release.ps1`.
+
+**2026-07-30 update:** that local-`dist/` design assumed the dashboard and the Add-in build
+lived on the same machine, which broke the moment the dashboard deployed to Render -
+nothing on Render can see a Windows machine's `dist/` folder. Replaced with GitHub
+Releases as the artifact store: `build-release.ps1` now also produces
+`dist/xGIS-<version>-installer.zip`, published as a Release asset on this repo;
+`addinRelease.ts` queries GitHub's Releases API for the latest one instead of reading
+local disk, and the route 302-redirects to the asset URL instead of proxying zip bytes
+through the server. The `archiver` dependency this route used to build the zip at request
+time is gone - zipping now happens once, at build time, in PowerShell.
