@@ -149,17 +149,28 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
   if (!apiKey) return;
 
   setStoredApiKey(apiKey);
+  // PUT /settings validates the key against the real backend before accepting it (see
+  // orchestrator/app/routes/settings.py) and returns {saved: false, error} rather than a
+  // non-2xx status on a rejected key - checking the body, not just fetch() not throwing,
+  // is what catches that case instead of telling the renderer "signed in" when the
+  // orchestrator silently never actually stored the key.
+  let primed = false;
+  let errorDetail: string | undefined;
   try {
-    await fetch(`http://127.0.0.1:${ORCHESTRATOR_PORT}/settings`, {
+    const res = await fetch(`http://127.0.0.1:${ORCHESTRATOR_PORT}/settings`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ homie_api_key: apiKey }),
     });
+    const body = (await res.json()) as { saved?: boolean; error?: string };
+    primed = body.saved === true;
+    errorDetail = body.error;
   } catch (err) {
     console.error("failed to prime orchestrator after sign-in:", err);
+    errorDetail = err instanceof Error ? err.message : String(err);
   }
 
-  mainWindow?.webContents.send("xcrop:signed-in");
+  mainWindow?.webContents.send("xcrop:signed-in", { success: primed, error: primed ? undefined : errorDetail });
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();

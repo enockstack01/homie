@@ -2,10 +2,11 @@ import type { Account } from "../lib/api";
 
 interface Props {
   account: Account | null;
+  signInError: string | null;
   onSignIn: () => void;
 }
 
-export function SignInCard({ account, onSignIn }: Props) {
+export function SignInCard({ account, signInError, onSignIn }: Props) {
   if (account) {
     return (
       <div className="card signin-card">
@@ -29,8 +30,9 @@ export function SignInCard({ account, onSignIn }: Props) {
       <div className="signin-copy">
         <h2>Sign in to your Homie account</h2>
         <p>Enables AI explanations and chat. Opens a sign-in page in your browser - no key to copy or paste.</p>
+        {signInError && <p className="error">Sign-in didn&apos;t complete: {signInError}</p>}
       </div>
-      <button onClick={onSignIn}>Sign in with Homie</button>
+      <button onClick={onSignIn}>{signInError ? "Try again" : "Sign in with Homie"}</button>
     </div>
   );
 }

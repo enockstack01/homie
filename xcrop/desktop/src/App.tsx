@@ -16,6 +16,7 @@ export function App() {
   const [orchestratorReady, setOrchestratorReady] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -74,10 +75,22 @@ export function App() {
   }, [orchestratorReady, refreshCrops]);
 
   // Fires once the xcrop://auth-callback handoff (browser sign-in -> Electron main
-  // process, see electron/main.ts) has stored the new key and primed the orchestrator
-  // with it - refresh here rather than polling, since the callback can land at any time,
-  // not just around app startup.
-  useEffect(() => window.xcropSecure.onSignedIn(() => void refreshSettings()), [refreshSettings]);
+  // process, see electron/main.ts) has stored the new key - refresh here rather than
+  // polling, since the callback can land at any time, not just around app startup. A
+  // failed priming (e.g. backend unreachable) surfaces as signInError instead of leaving
+  // the user staring at an unchanged "Sign in" button with no explanation.
+  useEffect(
+    () =>
+      window.xcropSecure.onSignedIn((result) => {
+        if (result.success) {
+          setSignInError(null);
+          void refreshSettings();
+        } else {
+          setSignInError(result.error ?? "Sign-in didn't complete - please try again.");
+        }
+      }),
+    [refreshSettings]
+  );
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
@@ -127,7 +140,11 @@ export function App() {
         {view === "dashboard" ? (
           <DashboardView
             account={account}
-            onSignIn={() => window.xcropSecure.openSignIn()}
+            signInError={signInError}
+            onSignIn={() => {
+              setSignInError(null);
+              window.xcropSecure.openSignIn();
+            }}
             crops={crops}
             onCropsChanged={refreshCrops}
             onOpenRunInMap={handleOpenRunInMap}

@@ -10,8 +10,9 @@ contextBridge.exposeInMainWorld("xcropSecure", {
   setApiKey: (apiKey: string): Promise<boolean> => ipcRenderer.invoke("xcrop:setApiKey", apiKey),
   clearApiKey: (): Promise<void> => ipcRenderer.invoke("xcrop:clearApiKey"),
   openSignIn: (): Promise<void> => ipcRenderer.invoke("xcrop:openSignIn"),
-  onSignedIn: (callback: () => void): (() => void) => {
-    const listener = () => callback();
+  onSignedIn: (callback: (result: { success: boolean; error?: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, result: { success: boolean; error?: string }) =>
+      callback(result);
     ipcRenderer.on("xcrop:signed-in", listener);
     return () => ipcRenderer.removeListener("xcrop:signed-in", listener);
   },

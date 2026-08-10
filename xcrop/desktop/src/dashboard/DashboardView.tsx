@@ -7,6 +7,7 @@ import { RunDetail } from "./RunDetail";
 
 interface Props {
   account: Account | null;
+  signInError: string | null;
   onSignIn: () => void;
   crops: CropProfile[];
   onCropsChanged: () => void;
@@ -14,7 +15,15 @@ interface Props {
   onGoToMap: () => void;
 }
 
-export function DashboardView({ account, onSignIn, crops, onCropsChanged, onOpenRunInMap, onGoToMap }: Props) {
+export function DashboardView({
+  account,
+  signInError,
+  onSignIn,
+  crops,
+  onCropsChanged,
+  onOpenRunInMap,
+  onGoToMap,
+}: Props) {
   const [runs, setRuns] = useState<RunResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunResult | null>(null);
@@ -44,7 +53,7 @@ export function DashboardView({ account, onSignIn, crops, onCropsChanged, onOpen
           <button onClick={onGoToMap}>+ New analysis</button>
         </div>
 
-        <SignInCard account={account} onSignIn={onSignIn} />
+        <SignInCard account={account} signInError={signInError} onSignIn={onSignIn} />
 
         {stats && (
           <div className="stat-cards">

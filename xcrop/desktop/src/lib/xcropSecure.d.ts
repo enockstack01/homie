@@ -11,9 +11,12 @@ declare global {
       setApiKey(apiKey: string): Promise<boolean>;
       clearApiKey(): Promise<void>;
       openSignIn(): Promise<void>;
-      /** Fires once the xcrop://auth-callback handoff has stored a new key and primed
-       * the orchestrator with it. Returns an unsubscribe function. */
-      onSignedIn(callback: () => void): () => void;
+      /** Fires once the xcrop://auth-callback handoff has stored a new key. `success` is
+       * true only if the orchestrator also validated and accepted it (see
+       * electron/main.ts's handleAuthCallbackUrl) - false means the key was received but
+       * priming failed (e.g. couldn't reach the backend), with `error` describing why.
+       * Returns an unsubscribe function. */
+      onSignedIn(callback: (result: { success: boolean; error?: string }) => void): () => void;
     };
   }
 }
