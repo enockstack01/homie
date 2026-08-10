@@ -31,7 +31,8 @@ export async function callBackend<T>(
     throw new Error("BACKEND_URL is not configured (see .env.local.example)");
   }
 
-  const response = await fetch(`${backendUrl}${path}`, {
+  const method = init?.method?.toUpperCase() ?? "GET";
+  const fetchInit: RequestInit = {
     ...init,
     headers: {
       ...init?.headers,
@@ -39,11 +40,33 @@ export async function callBackend<T>(
       "Content-Type": "application/json",
     },
     cache: "no-store",
-  });
+  };
+
+  // Render's free tier spins the backend down after idle and briefly answers with a
+  // 502/503/504 from its edge while the service cold-starts. Retrying is only safe for
+  // reads (GET) - mutating calls surface the error immediately rather than risk a
+  // duplicate side effect if the origin actually received the first attempt.
+  const maxAttempts = method === "GET" ? 3 : 1;
+  let response: Response;
+  for (let attempt = 1; ; attempt++) {
+    response = await fetch(`${backendUrl}${path}`, fetchInit);
+    const isTransientGatewayError = [502, 503, 504].includes(response.status);
+    if (!isTransientGatewayError || attempt >= maxAttempts) break;
+    await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+  }
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new BackendError(response.status, body || response.statusText);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = await response.json().catch(() => null);
+      const detail = body?.detail ?? body?.message;
+      if (typeof detail === "string" && detail) {
+        throw new BackendError(response.status, detail);
+      }
+    }
+    // Non-JSON error bodies (e.g. an infrastructure/proxy error page) aren't safe
+    // or useful to render as-is, so fall back to a short, generic message.
+    throw new BackendError(response.status, response.statusText || "The backend is unreachable");
   }
 
   return response.json() as Promise<T>;
