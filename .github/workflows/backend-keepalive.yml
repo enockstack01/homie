@@ -1,0 +1,24 @@
+name: backend-keepalive
+
+# Render's free tier spins the backend down after ~15 minutes of no traffic, and the
+# first request after that hits a cold start - during that window Render's edge answers
+# with a 502 instead of proxying through, which is what admin-dashboard's
+# BackendErrorNotice was surfacing (see lib/backend.ts). Pinging /health regularly keeps
+# the service from ever going idle in the first place, instead of just handling the 502
+# gracefully after it happens.
+#
+# GitHub's actual cron firing can drift by a few minutes under load, so this pings every
+# 10 minutes to leave margin under Render's 15-minute idle window. workflow_dispatch is
+# included so this can be triggered by hand to verify it's reaching the backend at all.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: curl --fail --silent --show-error --max-time 30 https://homie-platform.onrender.com/health
