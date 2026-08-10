@@ -33,6 +33,24 @@ separate app), so it has full, in-process access to your live map and project.
    status line after each reply shows your remaining credit balance - if a request is
    rejected for insufficient balance, ask your admin for a top-up.
 
+## Crop suitability analysis (xcrop)
+
+Ask xGIS Chat things like *"what crop profiles are available?"* or *"run avocado
+suitability analysis for the current view"* and it calls into the same suitability
+engine as the xcrop desktop app, adding the result as a new colored layer (FAO S1-N
+classes) to your active map. Two things this needs beyond a normal xGIS chat request:
+
+- **The xcrop orchestrator must be built first**: `cd xcrop\orchestrator`, then
+  `.venv\Scripts\pip install -r requirements-dev.txt` and `.\build.ps1` (see
+  `xcrop/README.md`) - xGIS looks for the resulting `xcrop-orchestrator.exe` next to its
+  own sibling `xcrop\` folder in this repo automatically, or set the
+  `XCROP_ORCHESTRATOR_PATH` environment variable to point at it if you've installed xGIS
+  somewhere that layout doesn't hold. xGIS starts and stops this process itself - nothing
+  to run by hand.
+- **Pan/zoom to your area of interest first** - a suitability run analyzes the map's
+  current visible extent, not a hand-drawn area (unlike the xcrop desktop app, which lets
+  you draw an AOI polygon directly).
+
 ## Updating
 
 Repeat the install steps with a newer `xGIS.AddIn.esriAddinX` - it replaces the

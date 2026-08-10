@@ -118,6 +118,17 @@ export default async function RootLayout({
                   </Link>
                   {me && (
                     <nav className="flex items-center gap-5 text-sm font-medium">
+                      <Link
+                        href="/"
+                        title="Home"
+                        aria-label="Home"
+                        className="flex items-center gap-1.5 text-white/80 transition-colors hover:text-accent"
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                          <path d="M12 3.172 2.343 12h2.829v8h5v-6h3.656v6h5v-8h2.829L12 3.172Z" />
+                        </svg>
+                        Home
+                      </Link>
                       {NAV_BY_ROLE[me.role].map((item) => (
                         <Link
                           key={item.href}

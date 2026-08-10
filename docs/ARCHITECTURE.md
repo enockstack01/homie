@@ -96,3 +96,13 @@ the simple "paste a key once" UX a real long-lived API key would have given it a
   + audit log + ArcGIS Pro's own Undo stack (confirm early that add-in-invoked
   `ExecuteToolAsync` calls register with `OperationManager` the same way the Geoprocessing
   pane's calls do — don't assume).
+- `Tools/CropSuitabilityTools.cs` (crop suitability via `../../xcrop/orchestrator` — see
+  `Orchestrator/OrchestratorProcess.cs`/`OrchestratorClient.cs`) only reads the active
+  map's current visible extent as the AOI, not a hand-drawn or selected-feature area — ask
+  the user to pan/zoom first. `run_crop_suitability_analysis` was verified by direct
+  MSBuild compilation, the full xGIS.AddIn.Tests suite (27/27, including the pure
+  GeoJSON-building helpers in `CropSuitabilityToolsTests.cs`), and a real install +
+  ArcGIS Pro launch with no load-time errors — the live chat → tool-call → rendered-layer
+  path itself needs a manual run inside ArcGIS Pro to confirm end-to-end, since there's no
+  UI-automation harness for this WPF host the way `xcrop/desktop`'s Playwright-driven
+  `run-desktop` skill covers Electron.
