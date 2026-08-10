@@ -1,0 +1,11 @@
+orchestrator/.venv/
+orchestrator/__pycache__/
+orchestrator/**/__pycache__/
+orchestrator/.pytest_cache/
+orchestrator/build/
+orchestrator/dist/
+orchestrator/xcrop-orchestrator.spec
+desktop/node_modules/
+desktop/dist/
+desktop/dist-electron/
+desktop/release/
