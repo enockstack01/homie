@@ -7,10 +7,23 @@ name: backend-keepalive
 # the service from ever going idle in the first place, instead of just handling the 502
 # gracefully after it happens.
 #
-# GitHub's actual cron firing can drift by a few minutes under load, so this pings every
-# 10 minutes to leave margin under Render's 15-minute idle window. workflow_dispatch is
-# included so this can be triggered by hand to verify it's reaching the backend at all.
-
+# In practice GitHub's scheduler does NOT reliably honor a 10-minute cron - checked via
+# the Actions API on 2026-08-12 and found actual gaps between runs of 40-150+ minutes, far
+# past Render's 15-minute idle window, so the backend was going cold between pings
+# regardless of this file's interval. This is a known GitHub Actions limitation for
+# sub-15-minute schedules (they're deprioritized/delayed under platform load), not
+# something a workflow-file change can fix outright - if this keeps happening, replace the
+# schedule trigger with an external pinger that has real interval guarantees (e.g. a
+# Render Cron Job, or a free service like cron-job.org/UptimeRobot hitting /health).
+# lib/backend.ts's retry budget was widened to ride out a full cold start on its own so
+# the user-facing flow doesn't depend on this ping landing on time - keep both fixes,
+# they cover different failure modes.
+#
+# Separately, every run of this workflow was failing outright even when it did fire: a
+# cold start measured directly against the backend takes 20-40s, longer than this step's
+# old --max-time 30, so the ping itself timed out before ever getting a response and
+# instead of registering as a (harmless) slow success, showed as a workflow failure. Bumped
+# to 60s, with --retry to absorb a transient 502/503 on top of that.
 on:
   schedule:
     - cron: "*/10 * * * *"
@@ -21,4 +34,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping backend health endpoint
-        run: curl --fail --silent --show-error --max-time 30 https://homie-platform.onrender.com/health
+        run: curl --fail --silent --show-error --max-time 60 --retry 2 --retry-delay 5 https://homie-platform.onrender.com/health

@@ -42,17 +42,25 @@ export async function callBackend<T>(
     cache: "no-store",
   };
 
-  // Render's free tier spins the backend down after idle and briefly answers with a
-  // 502/503/504 from its edge while the service cold-starts. Retrying is only safe for
-  // reads (GET) - mutating calls surface the error immediately rather than risk a
-  // duplicate side effect if the origin actually received the first attempt.
-  const maxAttempts = method === "GET" ? 3 : 1;
+  // Render's free tier spins the backend down after idle, and a cold start measured
+  // directly against homie-platform.onrender.com/health takes 20-40s before it stops
+  // answering with a 502/503/504 from its edge - the keep-alive ping (see
+  // .github/workflows/backend-keepalive.yml) is defense-in-depth, not a guarantee, since
+  // GitHub's scheduler doesn't reliably honor a 10-minute cron (observed drift up to 150
+  // minutes between actual runs). This retry budget is sized to ride out a full cold start
+  // on its own rather than depend on the ping alone: 5 attempts with backoff capped at 8s
+  // (3s+6s+8s+8s = 25s between fetches) comfortably covers the 20-40s window instead of
+  // the previous 3 attempts/~6s, which gave up mid cold-start and surfaced the 502 to the
+  // user. Retrying is only safe for reads (GET) - mutating calls surface the error
+  // immediately rather than risk a duplicate side effect if the origin actually received
+  // the first attempt.
+  const maxAttempts = method === "GET" ? 5 : 1;
   let response: Response;
   for (let attempt = 1; ; attempt++) {
     response = await fetch(`${backendUrl}${path}`, fetchInit);
     const isTransientGatewayError = [502, 503, 504].includes(response.status);
     if (!isTransientGatewayError || attempt >= maxAttempts) break;
-    await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+    await new Promise((resolve) => setTimeout(resolve, Math.min(attempt * 3000, 8000)));
   }
 
   if (!response.ok) {
