@@ -9,6 +9,7 @@ interface Props {
   account: Account | null;
   signInError: string | null;
   onSignIn: () => void;
+  onSignOut: () => void;
   crops: CropProfile[];
   onCropsChanged: () => void;
   onOpenRunInMap: (run: RunResult) => void;
@@ -19,6 +20,7 @@ export function DashboardView({
   account,
   signInError,
   onSignIn,
+  onSignOut,
   crops,
   onCropsChanged,
   onOpenRunInMap,
@@ -53,7 +55,7 @@ export function DashboardView({
           <button onClick={onGoToMap}>+ New analysis</button>
         </div>
 
-        <SignInCard account={account} signInError={signInError} onSignIn={onSignIn} />
+        <SignInCard account={account} signInError={signInError} onSignIn={onSignIn} onSignOut={onSignOut} />
 
         {stats && (
           <div className="stat-cards">

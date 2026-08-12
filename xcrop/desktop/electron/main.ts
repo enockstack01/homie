@@ -170,11 +170,34 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
     errorDetail = err instanceof Error ? err.message : String(err);
   }
 
-  mainWindow?.webContents.send("xcrop:signed-in", { success: primed, error: primed ? undefined : errorDetail });
+  await sendSignedInResult({ success: primed, error: primed ? undefined : errorDetail });
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    // .focus() alone can lose to Windows' foreground-lock when this process was just
+    // launched fresh by the OS opening a xcrop://... link from the browser (as opposed to
+    // an already-running instance regaining focus) - app.focus({steal: true}) is what
+    // actually wins that fight and brings the window to the front instead of just
+    // flashing the taskbar icon.
+    app.focus({ steal: true });
     mainWindow.focus();
   }
+}
+
+// A fresh launch (xcrop://... with no xcrop instance already running) has createWindow()
+// kick off an async page load and then, without awaiting it, immediately go on to call
+// handleAuthCallbackUrl - so webContents.send() can easily race the renderer's
+// window.xcropSecure.onSignedIn listener (registered by a React effect after the page
+// loads) and fire before anything is listening. Electron does not queue/buffer IPC sent
+// to a not-yet-listening renderer - a dropped message here is a silently-lost sign-in
+// that leaves the dashboard stuck showing "Sign in" despite the key having actually saved.
+// Waiting for did-finish-load first closes that window.
+async function sendSignedInResult(result: { success: boolean; error?: string }): Promise<void> {
+  if (!mainWindow) return;
+  if (mainWindow.webContents.isLoading()) {
+    await new Promise<void>((resolve) => mainWindow!.webContents.once("did-finish-load", () => resolve()));
+  }
+  mainWindow.webContents.send("xcrop:signed-in", result);
 }
 
 function findProtocolUrl(argv: string[]): string | undefined {

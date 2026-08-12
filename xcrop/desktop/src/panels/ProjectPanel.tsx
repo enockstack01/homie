@@ -31,10 +31,13 @@ export function ProjectPanel({
         <button onClick={onStartDrawing}>+ New project (draw AOI)</button>
       )}
       {drawing && (
-        <p className="hint">Click on the map to place vertices, double-click to close the polygon.</p>
+        <p className="hint">
+          Click to place vertices, double-click to close the polygon. Backspace undoes the last point, Esc cancels.
+        </p>
       )}
       {pendingAoi && (
         <div className="stack">
+          <p className="hint">Drag a point to move it, double-click to delete it, or click an edge to add one.</p>
           <input placeholder="Project name" value={name} onChange={(e) => setName(e.target.value)} />
           <div className="row">
             <button

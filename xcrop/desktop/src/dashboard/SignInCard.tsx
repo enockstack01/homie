@@ -4,9 +4,10 @@ interface Props {
   account: Account | null;
   signInError: string | null;
   onSignIn: () => void;
+  onSignOut: () => void;
 }
 
-export function SignInCard({ account, signInError, onSignIn }: Props) {
+export function SignInCard({ account, signInError, onSignIn, onSignOut }: Props) {
   if (account) {
     return (
       <div className="card signin-card">
@@ -21,6 +22,9 @@ export function SignInCard({ account, signInError, onSignIn }: Props) {
             </div>
           </div>
         </div>
+        <button className="ghost" onClick={onSignOut}>
+          Sign out
+        </button>
       </div>
     );
   }

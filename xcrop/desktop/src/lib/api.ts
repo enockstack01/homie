@@ -122,4 +122,5 @@ export const api = {
       body: JSON.stringify({ homie_api_key, homie_api_base }),
     }),
   getAccount: () => request<Account>("/settings/account"),
+  clearSettings: () => request<{ cleared: boolean }>("/settings", { method: "DELETE" }),
 };

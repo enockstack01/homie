@@ -40,6 +40,23 @@ export function App() {
     }
   }, []);
 
+  // Clears both halves of the stored key - the orchestrator's in-memory copy (this
+  // process's lifetime only) and Electron's at-rest one (see credentialStore.ts) -
+  // otherwise a fresh orchestrator spawn or the next settings read would resurrect
+  // whichever half survived. Best-effort: an unreachable orchestrator shouldn't block
+  // clearing the at-rest copy, since either failure mode is much worse than "sign out
+  // did less than it could" - the alternative is not signing out the user at all.
+  const handleSignOut = useCallback(async () => {
+    try {
+      await api.clearSettings();
+    } catch {
+      // Orchestrator may already be down - still clear the at-rest key below.
+    }
+    await window.xcropSecure.clearApiKey();
+    setHasApiKey(false);
+    setAccount(null);
+  }, []);
+
   const refreshSettings = useCallback(async () => {
     try {
       const s = await api.getSettings();
@@ -92,11 +109,32 @@ export function App() {
     [refreshSettings]
   );
 
+  // Backstop for the IPC event above: the orchestrator-readiness poll (previous effect)
+  // stops the moment the orchestrator responds at all, which happens almost immediately -
+  // long before the user has finished the browser sign-in round-trip. If the "signed-in"
+  // IPC message is ever missed (e.g. the fresh-launch race in electron/main.ts's
+  // sendSignedInResult, or the user switching back to xcrop before it fires), nothing
+  // would otherwise re-check settings and the dashboard would sit showing "Sign in"
+  // forever despite the key having actually saved. Refreshing on window focus - the exact
+  // moment the user returns from completing sign-in in their browser - closes that gap.
+  useEffect(() => {
+    window.addEventListener("focus", refreshSettings);
+    return () => window.removeEventListener("focus", refreshSettings);
+  }, [refreshSettings]);
+
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
   function handlePolygonComplete(polygon: GeoJSON.Polygon) {
     setPendingAoi(polygon);
     setDrawing(false);
+  }
+
+  // Shared by ProjectPanel's "Cancel" (shown once a polygon is complete and named) and
+  // MapView's Escape/"Cancel" (usable mid-draw too, before any polygon exists yet) - either
+  // way, back out of both drawing and review state entirely rather than leaving one half-set.
+  function handleCancelDrawing() {
+    setDrawing(false);
+    setPendingAoi(null);
   }
 
   async function handleSaveProject(name: string) {
@@ -135,7 +173,13 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <TopNav view={view} onViewChange={setView} account={account} onSignIn={() => window.xcropSecure.openSignIn()} />
+      <TopNav
+        view={view}
+        onViewChange={setView}
+        account={account}
+        onSignIn={() => window.xcropSecure.openSignIn()}
+        onSignOut={handleSignOut}
+      />
       <div className="app-body">
         {view === "dashboard" ? (
           <DashboardView
@@ -145,6 +189,7 @@ export function App() {
               setSignInError(null);
               window.xcropSecure.openSignIn();
             }}
+            onSignOut={handleSignOut}
             crops={crops}
             onCropsChanged={refreshCrops}
             onOpenRunInMap={handleOpenRunInMap}
@@ -166,7 +211,7 @@ export function App() {
                 onStartDrawing={() => setDrawing(true)}
                 pendingAoi={pendingAoi}
                 onSaveProject={handleSaveProject}
-                onCancelDrawing={() => setPendingAoi(null)}
+                onCancelDrawing={handleCancelDrawing}
               />
               <ParametersPanel crops={crops} onCropsChanged={refreshCrops} />
               {activeProject && (
@@ -189,6 +234,9 @@ export function App() {
               <MapView
                 drawing={drawing}
                 onPolygonComplete={handlePolygonComplete}
+                onCancelDrawing={handleCancelDrawing}
+                editable={!!pendingAoi}
+                onPolygonEdited={setPendingAoi}
                 activeAoi={pendingAoi ?? activeProject?.aoi_geojson ?? null}
                 results={run?.result.points ?? []}
               />

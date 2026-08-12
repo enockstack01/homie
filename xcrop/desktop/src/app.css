@@ -172,6 +172,79 @@ body,
   flex-shrink: 0;
 }
 
+/* Account dropdown - .account-pill is a <button>, so it needs a type selector here (not
+   just a class one) to out-specificity the generic button:hover:not(:disabled) rule below
+   and keep its own quieter hover instead of flashing accent green. */
+.account-menu-wrap {
+  position: relative;
+}
+
+.account-pill {
+  cursor: pointer;
+}
+
+button.account-pill:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 230px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  padding: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-menu-header .account-avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
+
+.account-menu-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.account-menu-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.account-menu-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.account-menu-signout {
+  width: 100%;
+  text-align: center;
+  color: var(--danger);
+  border-color: var(--danger-soft);
+}
+
+.account-menu-signout:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .app-body {
   flex: 1;
   display: flex;
@@ -438,7 +511,7 @@ button.danger:hover:not(:disabled) {
 }
 
 /* ============================================================
-   Map controls (basemap switcher, legend)
+   Map controls (basemap switcher, toolbar, coordinate readout, legend)
    ============================================================ */
 
 .map-control {
@@ -454,9 +527,31 @@ button.danger:hover:not(:disabled) {
   box-shadow: var(--shadow-card);
 }
 
-.basemap-switcher {
+/* Shared box styling for controls stacked inside .map-controls-left - unlike .map-control
+   these aren't individually positioned, the wrapper places the whole stack instead. */
+.map-control-panel {
+  background: rgba(16, 20, 27, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.map-controls-left {
+  position: absolute;
   top: 14px;
   left: 14px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.basemap-switcher {
   display: flex;
   gap: 4px;
 }
@@ -480,6 +575,60 @@ button.danger:hover:not(:disabled) {
 .basemap-btn.active {
   background: var(--accent);
   color: #06280f;
+}
+
+.map-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.toolbar-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.active {
+  background: var(--accent);
+  color: #06280f;
+  border-color: var(--accent);
+}
+
+.toolbar-readout {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding-top: 2px;
+}
+
+.toolbar-draw-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.toolbar-draw-actions .toolbar-btn {
+  flex: 1;
+}
+
+.coord-readout {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 
 .legend {

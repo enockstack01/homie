@@ -7,7 +7,7 @@ interface Props {
 
 export function BasemapSwitcher({ value, onChange }: Props) {
   return (
-    <div className="map-control basemap-switcher">
+    <div className="map-control-panel basemap-switcher">
       {BASEMAPS.map((b) => (
         <button
           key={b.id}

@@ -59,3 +59,14 @@ async def put_settings(body: SettingsIn) -> dict:
 
     set_api_key(body.homie_api_key)
     return {"saved": True, "account": whoami}
+
+
+@router.delete("")
+async def delete_settings() -> dict:
+    """Sign-out: drops the in-memory key (see config.py) so GET /settings/account and
+    everything gated on has_api_key goes back to signed-out immediately. Electron's own
+    at-rest copy is a separate erase (xcrop:clearApiKey, called alongside this by the
+    renderer) - clearing only one of the two would leave the other resurrecting the key on
+    the next orchestrator spawn (this one) or the next Settings-panel read (that one)."""
+    set_api_key(None)
+    return {"cleared": True}
