@@ -1,0 +1,19 @@
+{
+  "name": "homie-presentation-desktop",
+  "productName": "Homie Presentation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Homie Presentation desktop shell - Electron wrapping the same Next.js app the web portal uses",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "dev": "npm run build:electron && cross-env NODE_ENV=development electron dist-electron/main.js",
+    "start": "npm run build:electron && electron dist-electron/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "typescript": "^5"
+  }
+}
