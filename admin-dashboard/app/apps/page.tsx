@@ -10,9 +10,10 @@ import type { Me } from "@/lib/types";
  * "Homie Applications" - reachable from every role's nav (see app/layout.tsx's
  * NAV_BY_ROLE), unlike the rest of member/org-admin/super-admin which are role-scoped.
  * Homie GIS gets its full real download flow (AddinDownloadCard, gated on account status
- * the same way app/member/page.tsx already gates it); apps without a distribution
- * pipeline yet render as "Coming soon" with no action, rather than a dead or fabricated
- * link.
+ * the same way app/member/page.tsx already gates it); a web app with a `path` (see
+ * lib/apps.ts) gets an "Open" link straight to its page inside this dashboard; anything
+ * else without a distribution pipeline yet renders as "Coming soon" with no action,
+ * rather than a dead or fabricated link.
  */
 export default async function AppsPage() {
   let me: Me;
@@ -51,7 +52,11 @@ export default async function AppsPage() {
           app.id === "homie-gis" && me.status === "active" ? (
             <AddinDownloadCard key={app.id} version={xgisRelease?.version ?? null} />
           ) : (
-            <AppCard key={app.id} app={app} />
+            <AppCard
+              key={app.id}
+              app={app}
+              action={app.path ? { label: "Open", href: app.path } : undefined}
+            />
           ),
         )}
       </div>

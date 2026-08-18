@@ -24,6 +24,10 @@ export interface HomieApp {
   /** Single uppercase glyph for the icon tile, mirroring AddinDownloadCard's "x". */
   glyph: string;
   surface: "desktop" | "web";
+  /** Path to the app's own page inside this dashboard, for "web" apps that run here
+   * rather than as a separate deployment - set only once status is "available". See
+   * app/apps/page.tsx, which turns this into an "Open" action on the app's card. */
+  path?: string;
 }
 
 export const HOMIE_APPS: HomieApp[] = [
@@ -44,9 +48,10 @@ export const HOMIE_APPS: HomieApp[] = [
     tagline: "The AI presentation operating system",
     description:
       "Give it a design intent, your source documents, and instructions - it returns a finished, on-brand, fact-grounded deck, editable afterward through plain-language edits or a full design canvas.",
-    status: "coming_soon",
+    status: "available",
     color: "#6d28d9",
     glyph: "P",
     surface: "web",
+    path: "/apps/presentation",
   },
 ];
