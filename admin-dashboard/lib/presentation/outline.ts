@@ -46,6 +46,24 @@ function stripCodeFence(raw: string): string {
 
 export class OutlineParseError extends Error {}
 
+function parseSlideObject(slide: unknown, label: string): SlidePlan {
+  if (
+    typeof slide !== "object" ||
+    slide === null ||
+    typeof (slide as Record<string, unknown>).title !== "string" ||
+    !Array.isArray((slide as Record<string, unknown>).bullets)
+  ) {
+    throw new OutlineParseError(`${label} is missing a title or bullets array.`);
+  }
+  const bullets = (slide as { bullets: unknown[] }).bullets.filter(
+    (b): b is string => typeof b === "string" && b.trim().length > 0,
+  );
+  if (bullets.length === 0) {
+    throw new OutlineParseError(`${label} has no usable bullets.`);
+  }
+  return { title: (slide as { title: string }).title.trim(), bullets };
+}
+
 export function parseOutline(raw: string): SlidePlan[] {
   let parsed: unknown;
   try {
@@ -58,21 +76,18 @@ export function parseOutline(raw: string): SlidePlan[] {
     throw new OutlineParseError("Expected a non-empty array of slides.");
   }
 
-  return parsed.map((slide, i) => {
-    if (
-      typeof slide !== "object" ||
-      slide === null ||
-      typeof (slide as Record<string, unknown>).title !== "string" ||
-      !Array.isArray((slide as Record<string, unknown>).bullets)
-    ) {
-      throw new OutlineParseError(`Slide ${i + 1} is missing a title or bullets array.`);
-    }
-    const bullets = (slide as { bullets: unknown[] }).bullets.filter(
-      (b): b is string => typeof b === "string" && b.trim().length > 0,
-    );
-    if (bullets.length === 0) {
-      throw new OutlineParseError(`Slide ${i + 1} has no usable bullets.`);
-    }
-    return { title: (slide as { title: string }).title.trim(), bullets };
-  });
+  return parsed.map((slide, i) => parseSlideObject(slide, `Slide ${i + 1}`));
+}
+
+/** Same shape as one entry of parseOutline's array, for the AI-edit path
+ * (app/api/presentation/ai-edit/route.ts) where the model revises a single slide rather
+ * than drafting a whole deck. */
+export function parseSingleSlide(raw: string): SlidePlan {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripCodeFence(raw));
+  } catch {
+    throw new OutlineParseError("The model's response wasn't valid JSON.");
+  }
+  return parseSlideObject(parsed, "The revised slide");
 }

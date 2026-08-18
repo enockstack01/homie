@@ -150,6 +150,16 @@ export const TEMPLATES: Template[] = [
       footer: "[Contact name / email / phone]",
     },
   },
+  {
+    id: "blank-flyer",
+    kind: "flyer",
+    name: "Blank Flyer",
+    description: "A headline and one body line - just a starting point.",
+    content: {
+      headline: "Headline",
+      body: ["First point"],
+    },
+  },
 ];
 
 export function findTemplate(id: string): Template | undefined {
