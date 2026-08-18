@@ -7,11 +7,10 @@ interface Props {
   view: View;
   onViewChange: (view: View) => void;
   account: Account | null;
-  onSignIn: () => void;
   onSignOut: () => void;
 }
 
-export function TopNav({ view, onViewChange, account, onSignIn, onSignOut }: Props) {
+export function TopNav({ view, onViewChange, account, onSignOut }: Props) {
   return (
     <header className="top-nav">
       <div className="brand">
@@ -33,15 +32,7 @@ export function TopNav({ view, onViewChange, account, onSignIn, onSignOut }: Pro
 
       <div className="top-nav-spacer" />
 
-      <div className="top-nav-account">
-        {account ? (
-          <AccountMenu account={account} onSignOut={onSignOut} />
-        ) : (
-          <button className="secondary" onClick={onSignIn}>
-            Sign in
-          </button>
-        )}
-      </div>
+      <div className="top-nav-account">{account && <AccountMenu account={account} onSignOut={onSignOut} />}</div>
     </header>
   );
 }

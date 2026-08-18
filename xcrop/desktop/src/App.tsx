@@ -16,7 +16,6 @@ export function App() {
   const [orchestratorReady, setOrchestratorReady] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
-  const [signInError, setSignInError] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -91,37 +90,6 @@ export function App() {
     refreshCrops();
   }, [orchestratorReady, refreshCrops]);
 
-  // Fires once the xcrop://auth-callback handoff (browser sign-in -> Electron main
-  // process, see electron/main.ts) has stored the new key - refresh here rather than
-  // polling, since the callback can land at any time, not just around app startup. A
-  // failed priming (e.g. backend unreachable) surfaces as signInError instead of leaving
-  // the user staring at an unchanged "Sign in" button with no explanation.
-  useEffect(
-    () =>
-      window.xcropSecure.onSignedIn((result) => {
-        if (result.success) {
-          setSignInError(null);
-          void refreshSettings();
-        } else {
-          setSignInError(result.error ?? "Sign-in didn't complete - please try again.");
-        }
-      }),
-    [refreshSettings]
-  );
-
-  // Backstop for the IPC event above: the orchestrator-readiness poll (previous effect)
-  // stops the moment the orchestrator responds at all, which happens almost immediately -
-  // long before the user has finished the browser sign-in round-trip. If the "signed-in"
-  // IPC message is ever missed (e.g. the fresh-launch race in electron/main.ts's
-  // sendSignedInResult, or the user switching back to xcrop before it fires), nothing
-  // would otherwise re-check settings and the dashboard would sit showing "Sign in"
-  // forever despite the key having actually saved. Refreshing on window focus - the exact
-  // moment the user returns from completing sign-in in their browser - closes that gap.
-  useEffect(() => {
-    window.addEventListener("focus", refreshSettings);
-    return () => window.removeEventListener("focus", refreshSettings);
-  }, [refreshSettings]);
-
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
   function handlePolygonComplete(polygon: GeoJSON.Polygon) {
@@ -173,22 +141,13 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <TopNav
-        view={view}
-        onViewChange={setView}
-        account={account}
-        onSignIn={() => window.xcropSecure.openSignIn()}
-        onSignOut={handleSignOut}
-      />
+      <TopNav view={view} onViewChange={setView} account={account} onSignOut={handleSignOut} />
       <div className="app-body">
         {view === "dashboard" ? (
           <DashboardView
             account={account}
-            signInError={signInError}
-            onSignIn={() => {
-              setSignInError(null);
-              window.xcropSecure.openSignIn();
-            }}
+            hasApiKey={hasApiKey}
+            onSettingsSaved={refreshSettings}
             onSignOut={handleSignOut}
             crops={crops}
             onCropsChanged={refreshCrops}

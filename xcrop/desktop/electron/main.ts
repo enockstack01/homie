@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
@@ -9,12 +9,6 @@ import { clearStoredApiKey, getStoredApiKey, setStoredApiKey } from "./credentia
 // window instead of needing to be run separately by the user.
 const ORCHESTRATOR_PORT = 8756;
 const ORCHESTRATOR_DIR = path.join(__dirname, "..", "..", "orchestrator");
-
-// The web page that completes Clerk sign-in and hands a Homie API key back to this app
-// (see admin-dashboard/app/desktop-signin/) - overridable for pointing at a local dev
-// server instead of the deployed one.
-const SIGNIN_URL = process.env.XCROP_SIGNIN_URL || "https://homie-frontend-pphb.onrender.com/desktop-signin";
-const PROTOCOL = "xcrop";
 
 let orchestratorProcess: ChildProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -115,93 +109,6 @@ function registerCredentialIpc(): void {
   ipcMain.handle("xcrop:getApiKey", () => getStoredApiKey());
   ipcMain.handle("xcrop:setApiKey", (_event, apiKey: string) => setStoredApiKey(apiKey));
   ipcMain.handle("xcrop:clearApiKey", () => clearStoredApiKey());
-  ipcMain.handle("xcrop:openSignIn", () => shell.openExternal(SIGNIN_URL));
-}
-
-// Standard desktop-app OAuth-style handoff: shell.openExternal(SIGNIN_URL) opens the
-// system browser to complete a real Clerk sign-in, and that page redirects back to
-// xcrop://auth-callback?key=... to hand the account's Homie API key to this process (see
-// admin-dashboard/app/desktop-signin/DesktopHandoff.tsx). Same pattern VS Code/GitHub
-// Desktop/Slack use for browser-based sign-in - there is no supported way to embed
-// Clerk's own hosted sign-in UI directly inside an Electron BrowserWindow and get a
-// trustworthy session out of it.
-function registerProtocolHandler(): void {
-  if (process.defaultApp) {
-    // Unpacked dev mode: argv[0] is the electron.exe itself, argv[1] is this script - the
-    // OS needs the *electron.exe command line that re-launches this exact app* to know
-    // what "opening xcrop://..." even means, since there's no dedicated xcrop.exe yet.
-    if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-    }
-  } else {
-    app.setAsDefaultProtocolClient(PROTOCOL);
-  }
-}
-
-async function handleAuthCallbackUrl(url: string): Promise<void> {
-  let apiKey: string | null;
-  try {
-    apiKey = new URL(url).searchParams.get("key");
-  } catch {
-    console.error("received malformed auth callback URL:", url);
-    return;
-  }
-  if (!apiKey) return;
-
-  setStoredApiKey(apiKey);
-  // PUT /settings validates the key against the real backend before accepting it (see
-  // orchestrator/app/routes/settings.py) and returns {saved: false, error} rather than a
-  // non-2xx status on a rejected key - checking the body, not just fetch() not throwing,
-  // is what catches that case instead of telling the renderer "signed in" when the
-  // orchestrator silently never actually stored the key.
-  let primed = false;
-  let errorDetail: string | undefined;
-  try {
-    const res = await fetch(`http://127.0.0.1:${ORCHESTRATOR_PORT}/settings`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ homie_api_key: apiKey }),
-    });
-    const body = (await res.json()) as { saved?: boolean; error?: string };
-    primed = body.saved === true;
-    errorDetail = body.error;
-  } catch (err) {
-    console.error("failed to prime orchestrator after sign-in:", err);
-    errorDetail = err instanceof Error ? err.message : String(err);
-  }
-
-  await sendSignedInResult({ success: primed, error: primed ? undefined : errorDetail });
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    if (!mainWindow.isVisible()) mainWindow.show();
-    // .focus() alone can lose to Windows' foreground-lock when this process was just
-    // launched fresh by the OS opening a xcrop://... link from the browser (as opposed to
-    // an already-running instance regaining focus) - app.focus({steal: true}) is what
-    // actually wins that fight and brings the window to the front instead of just
-    // flashing the taskbar icon.
-    app.focus({ steal: true });
-    mainWindow.focus();
-  }
-}
-
-// A fresh launch (xcrop://... with no xcrop instance already running) has createWindow()
-// kick off an async page load and then, without awaiting it, immediately go on to call
-// handleAuthCallbackUrl - so webContents.send() can easily race the renderer's
-// window.xcropSecure.onSignedIn listener (registered by a React effect after the page
-// loads) and fire before anything is listening. Electron does not queue/buffer IPC sent
-// to a not-yet-listening renderer - a dropped message here is a silently-lost sign-in
-// that leaves the dashboard stuck showing "Sign in" despite the key having actually saved.
-// Waiting for did-finish-load first closes that window.
-async function sendSignedInResult(result: { success: boolean; error?: string }): Promise<void> {
-  if (!mainWindow) return;
-  if (mainWindow.webContents.isLoading()) {
-    await new Promise<void>((resolve) => mainWindow!.webContents.once("did-finish-load", () => resolve()));
-  }
-  mainWindow.webContents.send("xcrop:signed-in", result);
-}
-
-function findProtocolUrl(argv: string[]): string | undefined {
-  return argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
 }
 
 // win.signAndEditExecutable is disabled in package.json's build config (see that file's
@@ -240,30 +147,20 @@ function createWindow(): void {
   }
 }
 
-registerProtocolHandler();
-
-// Windows/Linux deliver a xcrop://... launch as a brand-new OS process - without a
-// single-instance lock, that would open a second, orchestrator-spawning copy of xcrop
-// instead of handing the callback to the one already running. The losing instance below
+// Without a single-instance lock, launching xcrop a second time (e.g. double-clicking its
+// icon again while it's already running) would spawn a second orchestrator-owning copy
+// that immediately fails to bind 8756 out from under the first. The losing instance below
 // (gotLock === false) has nothing further to do; the winning instance's "second-instance"
-// listener receives the URL from it.
+// listener just brings the existing window to the front instead.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", (_event, argv) => {
-    const url = findProtocolUrl(argv);
-    if (url) void handleAuthCallbackUrl(url);
+  app.on("second-instance", () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-  });
-
-  // macOS delivers a custom-protocol launch through this event instead of argv/second-instance.
-  app.on("open-url", (event, url) => {
-    event.preventDefault();
-    void handleAuthCallbackUrl(url);
   });
 
   app.whenReady().then(async () => {
@@ -276,12 +173,6 @@ if (!gotLock) {
       console.error(err);
     }
     createWindow();
-
-    // The very first launch of this instance can itself be a xcrop://... invocation
-    // (rather than a *second* one caught by "second-instance" above) - e.g. the user had
-    // no xcrop window open at all when they clicked "Open xcrop" on the sign-in page.
-    const startupUrl = findProtocolUrl(process.argv);
-    if (startupUrl) void handleAuthCallbackUrl(startupUrl);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

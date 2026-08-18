@@ -58,17 +58,14 @@ placeholder, so nothing here gets mistaken for more than it is.
   `extraResource`. Verified end to end: installed app spawns the compiled orchestrator,
   loads the built UI (not a dev server), and runs a full draw-AOI → analyze flow against
   real Open-Meteo data. See "Building an installer" below.
-- **A Dashboard** (the app's default view) with a **Clerk-backed "Sign in with Homie"**
-  flow: clicking it opens the system browser to `admin-dashboard/app/desktop-signin`
-  (already-deployed Next.js + Clerk app), which completes a normal Clerk sign-in and hands
-  the account's existing Homie API key back to Electron via a custom-protocol redirect
-  (`xcrop://auth-callback?key=...` — the same pattern VS Code/GitHub Desktop/Slack use for
-  browser-based desktop sign-in; see `electron/main.ts`'s `registerProtocolHandler`/
-  `handleAuthCallbackUrl`). Deliberately fetches the *existing* key
-  (`GET /v1/my-api-key`), never rotates it, so signing in from xcrop can't silently
-  invalidate the same key already configured in the ArcGIS Pro Add-in. The Dashboard
-  itself shows account/credit status, aggregate stats (total runs, average suitability,
-  crops analyzed), every past run as a card (`GET /runs`, cross-project — see
+- **A Dashboard** (the app's default view), authenticated purely by pasting a **Homie API
+  key** (issue one from the Homie dashboard, or the ArcGIS Pro Add-in's own Settings panel
+  issues the same key) into the Settings form shown right there when no key is configured
+  yet — no browser hand-off, no separate sign-in page, nothing but the key itself. Once
+  it's saved (validated against the real backend by `orchestrator/app/routes/settings.py`'s
+  `PUT /settings` before being accepted or persisted), the Dashboard shows account/credit
+  status and a Sign-out control that clears it again, aggregate stats (total runs, average
+  suitability, crops analyzed), every past run as a card (`GET /runs`, cross-project — see
   `orchestrator/app/routes/runs.py`), a full run-detail view (class distribution,
   per-criterion weights *and* average scores so it's clear which criterion actually drove
   the result, not just the final blended number), a "View on map & ask AI" handoff back
@@ -115,9 +112,10 @@ orchestrator itself (see `electron/main.ts`). You don't need to start the orches
 hand; it's only useful to know how in case something needs debugging directly via curl
 against `http://127.0.0.1:8756`.
 
-On first launch, open **Homie account** in the sidebar and paste in a Homie API key
-(issue one from the Homie dashboard, or `POST /v1/my-api-key/issue` against the backend).
-Without one, everything works except the "Ask xcrop" chat panel.
+On first launch, the Dashboard (and the Map view's sidebar) shows a **Homie account** form
+- paste in a Homie API key there (issue one from the Homie dashboard, or `POST
+/v1/my-api-key/issue` against the backend). Without one, everything works except the "Ask
+xcrop" chat panel.
 
 ## Building an installer
 

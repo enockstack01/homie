@@ -47,13 +47,6 @@ further still: basemap switching, the Parameters panel (creates a crop profile),
 denser 12x12-grid analysis, and the chat panel's "Explain this analysis" quick action.
 `smoke4.mjs` covers the Dashboard (the app's default view): landing state, switching to
 Map and back, and confirming a freshly-run analysis shows up as a run card.
-`smoke_signin.mjs` covers the browser -> `xcrop://` sign-in handoff (see
-`admin-dashboard/app/desktop-signin/`) without a real Clerk session: launches the app,
-then spawns a second `electron.exe` with a synthetic `xcrop://auth-callback?key=...` argv
-- exactly what Windows does when a user's browser navigates there - and confirms the
-primary instance receives it via `second-instance`, stores the key, and (since the test
-key isn't real) shows the "didn't complete" error path rather than silently doing nothing.
-It restores whatever key (or lack of one) was stored before the test ran.
 Screenshots land in `%LOCALAPPDATA%\Temp\xcrop-shots\` (override: `SCREENSHOT_DIR`).
 
 Open-Meteo's free tier rate-limits under heavy back-to-back testing (`429` specifically on
@@ -159,20 +152,6 @@ npm run dev   # starts vite + electron together, opens a real window
     handles that rejection, it silently drops every command queued after the one that
     threw. `driver.mjs`'s `promptSafely()` swallows exactly that one error code for this
     reason - don't call `rl.prompt()` directly in a new command.
-
-- **A second Electron instance's own `startOrchestrator()` spawn can crash with a Python
-  `MemoryError` mid-import (inside pydantic's schema generation for FastAPI's own models)
-  on a memory-constrained machine**, if another orchestrator is already bound to 8756 and
-  the machine is already running Playwright + a first Electron instance + a dev orchestrator
-  + vite. This is caught and logged (`orchestrator exited with code 1`), harmless on its
-  own since the *already-running* orchestrator still answers requests on that port - but
-  `smoke_signin.mjs`'s second `electron.exe` spawn has been seen to then hang indefinitely
-  rather than exit promptly (unclear whether it's this crash's side effects or a slow/cold
-  real backend response upstream of it - `homie_api_base` now defaults to the real deployed
-  backend, not localhost, so `PUT /settings`'s validation call is a real network round trip).
-  If a `smoke_signin.mjs` run seems stuck past ~20s, don't wait it out - `TaskStop` it and
-  verify the fix a different way (e.g. `curl -X PUT http://127.0.0.1:8756/settings ...`
-  directly against an already-running orchestrator) rather than fighting the sandbox.
 
 - Two Electron windows show up under `app.windows()` in dev/unpacked mode: the real UI
   (`http://localhost:5173/`) and a `devtools://...` window (auto-opened by

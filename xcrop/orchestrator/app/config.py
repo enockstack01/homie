@@ -5,14 +5,12 @@ from pathlib import Path
 from pydantic import BaseModel
 
 # xcrop, unlike xGIS.AddIn, is a single-tenant consumer product pointed at Homie's own
-# hosted backend (see electron/main.ts's SIGNIN_URL, hardcoded to the same Render
-# service's frontend) - there's no "your organization's gateway" concept here for a user
-# to configure, so the default must be the real deployed backend, not localhost. Without
-# this, the browser sign-in handoff (electron/main.ts's handleAuthCallbackUrl) hands a
-# perfectly valid key to an orchestrator that then tries to validate it against nothing
-# listening on 127.0.0.1:8000, fails, and silently never sets has_api_key - the account
-# still shows "signed out" in the UI with no error anywhere. Overridable via env var for
-# local backend development only.
+# hosted backend - there's no "your organization's gateway" concept here for a user to
+# configure, so the default must be the real deployed backend, not localhost. Without
+# this, a key pasted into the desktop app's Settings panel (see routes/settings.py's
+# PUT /settings) would validate against nothing listening on 127.0.0.1:8000, fail, and
+# silently never set has_api_key - the account still shows disconnected in the UI with no
+# error anywhere. Overridable via env var for local backend development only.
 DEFAULT_HOMIE_API_BASE = os.environ.get("XCROP_HOMIE_API_BASE", "https://homie-platform.onrender.com")
 
 # Non-secret settings persist to a JSON file under the OS user-data dir - this is a

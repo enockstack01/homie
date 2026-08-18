@@ -939,30 +939,15 @@ button.danger:hover:not(:disabled) {
   font-size: 13px;
 }
 
-/* Sign-in card */
+/* Account card (Dashboard) */
 
-.signin-card {
+.account-card {
   padding: 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-.signin-card .signin-copy h2 {
-  font-size: 15px;
-  margin: 0 0 4px;
-  color: var(--text-primary);
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.signin-card .signin-copy p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-  max-width: 46ch;
 }
 
 .signed-in-badge {

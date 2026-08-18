@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type Account, type CropProfile, type RunResult } from "../lib/api";
 import { ParametersPanel } from "../panels/ParametersPanel";
-import { SignInCard } from "./SignInCard";
+import { SettingsPanel } from "../panels/SettingsPanel";
+import { AccountCard } from "./AccountCard";
 import { RunCard } from "./RunCard";
 import { RunDetail } from "./RunDetail";
 
 interface Props {
   account: Account | null;
-  signInError: string | null;
-  onSignIn: () => void;
+  hasApiKey: boolean;
+  onSettingsSaved: () => void;
   onSignOut: () => void;
   crops: CropProfile[];
   onCropsChanged: () => void;
@@ -18,8 +19,8 @@ interface Props {
 
 export function DashboardView({
   account,
-  signInError,
-  onSignIn,
+  hasApiKey,
+  onSettingsSaved,
   onSignOut,
   crops,
   onCropsChanged,
@@ -55,7 +56,11 @@ export function DashboardView({
           <button onClick={onGoToMap}>+ New analysis</button>
         </div>
 
-        <SignInCard account={account} signInError={signInError} onSignIn={onSignIn} onSignOut={onSignOut} />
+        {account ? (
+          <AccountCard account={account} onSignOut={onSignOut} />
+        ) : (
+          <SettingsPanel hasApiKey={hasApiKey} onSaved={onSettingsSaved} />
+        )}
 
         {stats && (
           <div className="stat-cards">
