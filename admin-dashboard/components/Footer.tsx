@@ -7,9 +7,10 @@ import Link from "next/link";
  * tokens, so it doesn't flip to a light footer just because the rest of the site is light).
  * Only rendered by app/layout.tsx for a signed-out visitor, so it only ever appears on the
  * pages a signed-out visitor can actually reach: "/" (LandingPage), "/sign-in", "/sign-up"
- * (see proxy.ts for that same route list). The "#xgis"/"#pricing"/"#roadmap"/"#paths"
- * links target section ids on LandingPage - from /sign-in or /sign-up they still resolve correctly
- * (Next navigates to "/" first, then the browser scrolls to the anchor).
+ * (see proxy.ts for that same route list). The
+ * "#applications"/"#homie-gis"/"#pricing"/"#roadmap"/"#paths" links target section ids on
+ * LandingPage - from /sign-in or /sign-up they still resolve correctly (Next navigates to
+ * "/" first, then the browser scrolls to the anchor).
  */
 export function Footer() {
   const year = new Date().getFullYear();
@@ -52,8 +53,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#xgis" className="hover:underline" style={{ color: fgMuted }}>
-                  Meet xGIS
+                <Link href="/#applications" className="hover:underline" style={{ color: fgMuted }}>
+                  Applications
+                </Link>
+              </li>
+              <li>
+                <Link href="/#homie-gis" className="hover:underline" style={{ color: fgMuted }}>
+                  Meet Homie GIS
                 </Link>
               </li>
               <li>

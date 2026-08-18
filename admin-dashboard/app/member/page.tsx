@@ -69,7 +69,7 @@ export default async function MemberPage() {
           </div>
           {!me.has_api_key && (
             <p className="mt-1 text-xs text-foreground/50">
-              This is what you paste into xGIS&apos;s Settings tab, inside ArcGIS Pro, to
+              This is what you paste into Homie GIS&apos;s Settings tab, inside ArcGIS Pro, to
               sign in.
             </p>
           )}

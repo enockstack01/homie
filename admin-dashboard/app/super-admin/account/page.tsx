@@ -41,7 +41,7 @@ export default async function SuperAdminAccountPage() {
         </div>
         {!me.has_api_key && (
           <p className="mt-1 text-xs text-foreground/50">
-            Only needed if you plan to use xGIS yourself - most super admins won&apos;t.
+            Only needed if you plan to use Homie GIS yourself - most super admins won&apos;t.
           </p>
         )}
       </div>

@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AppCard } from "@/components/AppCard";
+import { HOMIE_APPS } from "@/lib/apps";
 
 const FEATURES = [
   {
@@ -121,18 +123,36 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Meet xGIS */}
+      {/* Homie Applications */}
+      <section id="applications">
+        <h2 className="text-center text-2xl font-bold tracking-tight">Homie Applications</h2>
+        <p className="mx-auto mt-2 max-w-xl text-center text-sm text-foreground/60">
+          Every agentic tool built on the Homie platform, in one place - one account and
+          one credit pool works across all of them.
+        </p>
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {HOMIE_APPS.map((app) => (
+            <AppCard
+              key={app.id}
+              app={app}
+              action={app.status === "available" ? { label: "Get started", href: "/sign-up" } : undefined}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Meet Homie GIS */}
       <section
-        id="xgis"
+        id="homie-gis"
         className="grid grid-cols-1 items-center gap-10 rounded-2xl border border-border bg-surface p-8 lg:grid-cols-2 lg:p-12"
       >
         <div>
           <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
             Available now
           </span>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight">Meet xGIS: Homie&apos;s first agent</h2>
+          <h2 className="mt-3 text-2xl font-bold tracking-tight">Meet Homie GIS: Homie&apos;s first agent</h2>
           <p className="mt-3 text-sm text-foreground/60">
-            xGIS lives inside ArcGIS Pro and turns plain-English requests into real
+            Homie GIS lives inside ArcGIS Pro and turns plain-English requests into real
             geoprocessing work, buffering, clipping, dissolving, joining, symbolizing,
             and more, carried out directly on your live map and project.
           </p>
@@ -151,7 +171,7 @@ export function LandingPage() {
             </li>
           </ul>
           <Link href="/sign-up" className={`${CTA_PRIMARY} mt-6 inline-flex`}>
-            Try xGIS
+            Try Homie GIS
           </Link>
         </div>
 
@@ -175,7 +195,7 @@ export function LandingPage() {
       <section id="roadmap" className="text-center">
         <h2 className="text-xl font-bold tracking-tight">More tools are coming</h2>
         <p className="mx-auto mt-2 max-w-xl text-sm text-foreground/60">
-          xGIS is only the start. The same agentic core is headed to more desktop work next.
+          Homie GIS is only the start. The same agentic core is headed to more desktop work next.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {COMING_SOON.map((t) => (

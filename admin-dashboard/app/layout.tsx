@@ -35,9 +35,13 @@ const SUPER_ADMIN_NAV = [
   { href: "/super-admin/usage-logs", label: "Usage Logs" },
   { href: "/super-admin/credit-transactions", label: "Credit Transactions" },
   { href: "/super-admin/resources", label: "Resources" },
+  { href: "/apps", label: "Applications" },
   { href: "/super-admin/account", label: "My Account" },
 ];
 
+// "Applications" is deliberately in every role's nav, not just member's - it's the same
+// Homie Applications list (see lib/apps.ts) regardless of who's looking at it, same as
+// the "Home" link above which isn't role-gated either.
 const NAV_BY_ROLE: Record<Me["role"], { href: string; label: string }[]> = {
   super_admin: SUPER_ADMIN_NAV,
   // Same portal as super_admin, including the Resources page (viewing platform
@@ -47,8 +51,12 @@ const NAV_BY_ROLE: Record<Me["role"], { href: string; label: string }[]> = {
   org_admin: [
     { href: "/org-admin", label: "Members" },
     { href: "/org-admin/usage-logs", label: "Usage Logs" },
+    { href: "/apps", label: "Applications" },
   ],
-  member: [{ href: "/member", label: "My Account" }],
+  member: [
+    { href: "/member", label: "My Account" },
+    { href: "/apps", label: "Applications" },
+  ],
 };
 
 export default async function RootLayout({

@@ -2,9 +2,12 @@
  * Only rendered when the caller has already checked the account is active - matches
  * gating done again, independently, in app/download/xgis-addin/route.ts itself (this
  * component hiding the link is a convenience, not the actual access control). Styled as
- * a spotlight, not a plain utility card - xGIS is Homie's flagship agent, not a generic
- * "ArcGIS Pro Add-in" utility, so it gets billed as one of the best apps on the
+ * a spotlight, not a plain utility card - Homie GIS is Homie's flagship agent, not a
+ * generic "ArcGIS Pro Add-in" utility, so it gets billed as one of the best apps on the
  * platform rather than described by the plugin mechanism it happens to install as.
+ * (The underlying project/build/release pipeline still uses the "xGIS" name internally -
+ * see app/download/xgis-addin/route.ts and lib/addinRelease.ts - only this user-facing
+ * copy changed to "Homie GIS".)
  */
 export function AddinDownloadCard({ version }: { version: string | null }) {
   return (
@@ -22,10 +25,10 @@ export function AddinDownloadCard({ version }: { version: string | null }) {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg font-bold text-white"
             style={{ backgroundColor: "#e87722" }}
           >
-            x
+            G
           </div>
           <div>
-            <p className="text-base font-semibold">xGIS</p>
+            <p className="text-base font-semibold">Homie GIS</p>
             <p className="mt-0.5 text-sm text-foreground/60">
               Homie&apos;s flagship agent for ArcGIS Pro - turns plain-English requests
               into real geoprocessing work, live on your own map and project.
@@ -49,8 +52,8 @@ export function AddinDownloadCard({ version }: { version: string | null }) {
       {version && (
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-foreground/60">
           <li>Unzip the download, close ArcGIS Pro if it&apos;s open, then run <strong>Install.bat</strong>.</li>
-          <li>It registers xGIS and reopens ArcGIS Pro automatically - no click-through installer.</li>
-          <li>You&apos;ll see a new xGIS tab on the ribbon.</li>
+          <li>It registers Homie GIS and reopens ArcGIS Pro automatically - no click-through installer.</li>
+          <li>You&apos;ll see a new Homie GIS tab on the ribbon.</li>
           <li>
             Click <strong>Settings</strong> on that tab and paste your Homie API key (shown
             above) to start chatting.
