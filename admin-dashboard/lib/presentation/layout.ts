@@ -10,6 +10,21 @@ export const PRIMARY = "005C3D"; // Homie brand dark green
 export const ACCENT = "F8B712"; // Homie brand gold
 export const TEXT_DARK = "101914";
 
+/** Curated deck-wide color themes (PresentationStudio's theme picker) - each is a
+ * {primary, accent} pair fed into elements.ts's titleSlide/slideFromPlan/deckFromPlans,
+ * the same way the fixed Homie brand colors always were, just no longer hardcoded to one
+ * choice. Kept small and hand-picked (all readable white-on-primary, dark-on-white)
+ * rather than a full color-wheel picker - a "does this actually look good together"
+ * curation step a raw picker can't give you. */
+export const DECK_THEMES = [
+  { id: "homie", name: "Homie", primary: PRIMARY, accent: ACCENT },
+  { id: "midnight", name: "Midnight", primary: "111827", accent: "38BDF8" },
+  { id: "berry", name: "Berry", primary: "6D28D9", accent: "F472B6" },
+  { id: "sunset", name: "Sunset", primary: "9A3412", accent: "FCD34D" },
+  { id: "ocean", name: "Ocean", primary: "075985", accent: "5EEAD4" },
+  { id: "slate", name: "Slate", primary: "334155", accent: "E2E8F0" },
+] as const;
+
 export interface Box {
   xIn: number;
   yIn: number;

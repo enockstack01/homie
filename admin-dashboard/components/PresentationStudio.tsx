@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { TEMPLATES, type Template, type FlyerContent } from "@/lib/presentation/templates";
 import { type Slide, deckFromPlans, titleSlide } from "@/lib/presentation/elements";
+import { DECK_THEMES } from "@/lib/presentation/layout";
 import { Button } from "@/components/ui/Button";
 import { DeckEditor } from "@/components/presentation/DeckEditor";
 import { FlyerEditor } from "@/components/presentation/FlyerEditor";
@@ -30,11 +31,11 @@ function ScaledPreview({ width, height, children }: { width: number; height: num
   );
 }
 
-function TemplateThumbnail({ template }: { template: Template }) {
+function TemplateThumbnail({ template, primary, accent }: { template: Template; primary: string; accent: string }) {
   if (template.kind === "deck") {
     return (
       <ScaledPreview width={DECK_CANVAS_WIDTH} height={DECK_CANVAS_HEIGHT}>
-        <SlideCanvas slide={titleSlide(template.name)} editable={false} />
+        <SlideCanvas slide={titleSlide(template.name, primary, accent)} editable={false} />
       </ScaledPreview>
     );
   }
@@ -72,6 +73,8 @@ function downloadBlob(blob: Blob, fallbackName: string, disposition: string | nu
  * app/api/presentation/export/route.ts never calls the AI gateway). */
 export function PresentationStudio() {
   const [editing, setEditing] = useState<EditorState | null>(null);
+  const [themeId, setThemeId] = useState<(typeof DECK_THEMES)[number]["id"]>("homie");
+  const theme = DECK_THEMES.find((t) => t.id === themeId) ?? DECK_THEMES[0];
 
   const [genKind, setGenKind] = useState<"deck" | "flyer">("deck");
   const [deckTitle, setDeckTitle] = useState("");
@@ -89,7 +92,7 @@ export function PresentationStudio() {
   function openTemplate(t: Template) {
     setEditing(
       t.kind === "deck"
-        ? { kind: "deck", title: t.name, slides: deckFromPlans(t.name, t.slides), sourceText: "" }
+        ? { kind: "deck", title: t.name, slides: deckFromPlans(t.name, t.slides, theme.primary, theme.accent), sourceText: "" }
         : { kind: "flyer", title: t.name, content: t.content, sourceText: "" },
     );
   }
@@ -119,7 +122,7 @@ export function PresentationStudio() {
           : {
               kind: "deck",
               title: body.title,
-              slides: deckFromPlans(body.title, body.slides),
+              slides: deckFromPlans(body.title, body.slides, theme.primary, theme.accent),
               sourceText: body.sourceText ?? "",
             },
       );
@@ -194,16 +197,37 @@ export function PresentationStudio() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h2 className="text-base font-semibold">Choose a type of presentation</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Choose a type of presentation</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-foreground/50">Deck theme</span>
+            <div className="flex items-center gap-1.5">
+              {DECK_THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  title={t.name}
+                  onClick={() => setThemeId(t.id)}
+                  className={`h-6 w-6 overflow-hidden rounded-full border-2 ${
+                    themeId === t.id ? "border-primary" : "border-transparent"
+                  }`}
+                  style={{ background: `linear-gradient(135deg, #${t.primary} 50%, #${t.accent} 50%)` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
         <p className="mt-1 text-sm text-foreground/60">
           Every template opens in a free, Canva-style online editor - drag and resize
-          elements, edit text in place, add your own text/shapes/images, then export
-          whenever you&apos;re ready. No credits used.
+          elements, edit text in place, add your own text/shapes/images/tables, then
+          export whenever you&apos;re ready. No credits used. The theme above sets a new
+          deck&apos;s starting colors (decks only) - change any slide&apos;s background or
+          any element&apos;s color afterward regardless.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {TEMPLATES.map((t) => (
             <div key={t.id} className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
-              <TemplateThumbnail template={t} />
+              <TemplateThumbnail template={t} primary={theme.primary} accent={theme.accent} />
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold">{t.name}</p>

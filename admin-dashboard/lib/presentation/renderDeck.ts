@@ -19,6 +19,7 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
   for (const slide of slides) {
     const s = pres.addSlide();
     s.background = { color: slide.background };
+    if (slide.notes) s.addNotes(slide.notes);
 
     for (const el of slide.elements) {
       if (el.type === "text") {
@@ -32,7 +33,7 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
           bold: el.bold,
           italic: el.italic,
           align: el.align,
-          fontFace: "Arial",
+          fontFace: el.fontFamily ?? "Arial",
           valign: "top",
           lineSpacingMultiple: 1.3,
         });
@@ -42,8 +43,30 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
           y: el.yIn,
           w: el.wIn,
           h: el.hIn,
-          fill: { color: el.fill },
+          fill: { color: el.fill, transparency: 100 - (el.opacity ?? 100) },
+          line: { type: "none" },
         });
+      } else if (el.type === "table") {
+        s.addTable(
+          el.rows.map((row, ri) =>
+            row.map((cell) => ({
+              text: cell,
+              options:
+                el.headerRow && ri === 0
+                  ? { bold: true, fill: { color: "F1F5F4" }, color: "101914" }
+                  : { color: "101914" },
+            })),
+          ),
+          {
+            x: el.xIn,
+            y: el.yIn,
+            w: el.wIn,
+            h: el.hIn,
+            fontSize: 12,
+            border: { type: "solid", color: "D8DEDA", pt: 1 },
+            autoPage: false,
+          },
+        );
       } else {
         s.addImage({ data: el.dataUrl, x: el.xIn, y: el.yIn, w: el.wIn, h: el.hIn });
       }

@@ -20,6 +20,8 @@ import {
 // looks identical to the old fixed layout until the user actually moves something.
 
 export type TextAlign = "left" | "center" | "right";
+export const FONT_FAMILIES = ["Arial", "Georgia", "Verdana", "Times New Roman", "Trebuchet MS", "Courier New"] as const;
+export type FontFamily = (typeof FONT_FAMILIES)[number];
 
 export interface BaseElement {
   id: string;
@@ -31,13 +33,14 @@ export interface BaseElement {
 
 /** `role` marks an element as "the thing AI rewrite updates" (see DeckEditor.tsx's
  * extractPlanFromSlide/applyPlanToSlide) - freeform elements added by the user (a text
- * box, a shape, an image) have no role and are left untouched by AI rewrite. */
+ * box, a shape, an image, a table) have no role and are left untouched by AI rewrite. */
 export interface TextElement extends BaseElement {
   type: "text";
   role?: "title" | "body";
   text: string;
   fontSize: number;
   color: string;
+  fontFamily?: FontFamily;
   bold?: boolean;
   italic?: boolean;
   align?: TextAlign;
@@ -47,6 +50,10 @@ export interface ShapeElement extends BaseElement {
   type: "shape";
   shape: "rect" | "ellipse";
   fill: string;
+  /** 0-100, defaults to 100 (fully opaque) - what makes the overlapping-circle "designed
+   * cover graphic" look (see decorativeAccents below) possible without needing actual
+   * photography, which this app has no legitimate way to source. */
+  opacity?: number;
 }
 
 export interface ImageElement extends BaseElement {
@@ -54,12 +61,21 @@ export interface ImageElement extends BaseElement {
   dataUrl: string;
 }
 
-export type SlideElement = TextElement | ShapeElement | ImageElement;
+export interface TableElement extends BaseElement {
+  type: "table";
+  rows: string[][];
+  headerRow?: boolean;
+}
+
+export type SlideElement = TextElement | ShapeElement | ImageElement | TableElement;
 
 export interface Slide {
   id: string;
   background: string;
   elements: SlideElement[];
+  /** Speaker notes - exported via PptxGenJS's addNotes (lib/presentation/renderDeck.ts),
+   * never shown on the slide itself. */
+  notes?: string;
 }
 
 let counter = 0;
@@ -68,14 +84,33 @@ export function newId(): string {
   return `el_${Date.now().toString(36)}_${counter}`;
 }
 
+function cloneElement(el: SlideElement): SlideElement {
+  return { ...el, id: newId() };
+}
+
+/** A tasteful abstract cover graphic - a handful of overlapping, semi-transparent
+ * circles in the deck's own two brand colors. This is what "good-looking pictures" on
+ * every generated cover slide means here: a real, native, infinitely-crisp PowerPoint
+ * shape composition (fully editable/movable afterward like any other element), not a
+ * fake stock photo - this app has no licensed image library or stock-photo API to draw
+ * a real one from. */
+export function decorativeAccents(primary: string, accent: string): ShapeElement[] {
+  return [
+    { id: newId(), type: "shape", shape: "ellipse", fill: accent, opacity: 22, xIn: 6.9, yIn: -1.2, wIn: 4.5, hIn: 4.5 },
+    { id: newId(), type: "shape", shape: "ellipse", fill: "FFFFFF", opacity: 12, xIn: 8.2, yIn: 2.6, wIn: 3, hIn: 3 },
+    { id: newId(), type: "shape", shape: "ellipse", fill: primary, opacity: 35, xIn: -1.5, yIn: 3.6, wIn: 4, hIn: 4 },
+  ];
+}
+
 /** The auto-generated first page of a new deck - same visual as the old fixed "title
  * slide" (renderDeck.ts's original hardcoded first addSlide call), now just an ordinary
- * Slide made of two text elements. */
-export function titleSlide(title: string): Slide {
+ * Slide made of a decorative shape composition plus two text elements. */
+export function titleSlide(title: string, primary: string = PRIMARY, accent: string = ACCENT): Slide {
   return {
     id: newId(),
-    background: PRIMARY,
+    background: primary,
     elements: [
+      ...decorativeAccents(primary, accent),
       {
         id: newId(),
         type: "text",
@@ -98,7 +133,7 @@ export function titleSlide(title: string): Slide {
         wIn: DECK_SUBTITLE_BOX.wIn,
         hIn: DECK_SUBTITLE_BOX.hIn,
         fontSize: DECK_SUBTITLE_BOX.fontSize,
-        color: ACCENT,
+        color: accent,
       },
     ],
   };
@@ -106,12 +141,15 @@ export function titleSlide(title: string): Slide {
 
 /** One content slide from a {title, bullets} plan - the title and the bullets (joined as
  * one multi-line text box, same as a normal Canva body text box rather than N separate
- * draggable bullet objects) each become one role-tagged TextElement. */
-export function slideFromPlan(plan: SlidePlan): Slide {
+ * draggable bullet objects) each become one role-tagged TextElement, plus a small corner
+ * accent bar so content slides don't look bare next to the decorated cover. */
+export function slideFromPlan(plan: SlidePlan, primary: string = PRIMARY, accent: string = ACCENT): Slide {
   return {
     id: newId(),
     background: "FFFFFF",
     elements: [
+      { id: newId(), type: "shape", shape: "rect", fill: primary, xIn: 0, yIn: 0, wIn: 0.12, hIn: DECK_LAYOUT.heightIn },
+      { id: newId(), type: "shape", shape: "ellipse", fill: accent, opacity: 60, xIn: 9.55, yIn: -0.35, wIn: 0.9, hIn: 0.9 },
       {
         id: newId(),
         type: "text",
@@ -122,7 +160,7 @@ export function slideFromPlan(plan: SlidePlan): Slide {
         wIn: DECK_SLIDE_TITLE_BOX.wIn,
         hIn: DECK_SLIDE_TITLE_BOX.hIn,
         fontSize: DECK_SLIDE_TITLE_BOX.fontSize,
-        color: PRIMARY,
+        color: primary,
         bold: true,
       },
       {
@@ -141,8 +179,8 @@ export function slideFromPlan(plan: SlidePlan): Slide {
   };
 }
 
-export function deckFromPlans(title: string, plans: SlidePlan[]): Slide[] {
-  return [titleSlide(title), ...plans.map(slideFromPlan)];
+export function deckFromPlans(title: string, plans: SlidePlan[], primary: string = PRIMARY, accent: string = ACCENT): Slide[] {
+  return [titleSlide(title, primary, accent), ...plans.map((p) => slideFromPlan(p, primary, accent))];
 }
 
 /** A brand-new blank slide, for DeckEditor.tsx's "+ Add slide" - just enough to not be
@@ -169,6 +207,18 @@ export function blankSlide(): Slide {
   };
 }
 
+/** Deep-clones a slide with fresh element ids, for DeckEditor.tsx's "Duplicate slide". */
+export function duplicateSlide(slide: Slide): Slide {
+  return { ...slide, id: newId(), elements: slide.elements.map(cloneElement) };
+}
+
+/** Clones one element with a fresh id and a small position offset, so the copy is
+ * visible next to the original instead of stacked exactly on top of it - DeckEditor.tsx's
+ * "Duplicate element". */
+export function duplicateElement(el: SlideElement): SlideElement {
+  return { ...cloneElement(el), xIn: el.xIn + 0.25, yIn: el.yIn + 0.25 };
+}
+
 /** A freeform text box the user inserts via DeckEditor.tsx's "+ Text" button - deliberately
  * has no `role`, so AI rewrite (which only touches role-tagged elements) never touches it. */
 export function newTextBox(): TextElement {
@@ -187,6 +237,23 @@ export function newTextBox(): TextElement {
 
 export function newShape(): ShapeElement {
   return { id: newId(), type: "shape", shape: "rect", fill: ACCENT, xIn: 3.5, yIn: 2, wIn: 3, hIn: 2 };
+}
+
+export function newTable(): TableElement {
+  return {
+    id: newId(),
+    type: "table",
+    headerRow: true,
+    rows: [
+      ["Column A", "Column B", "Column C"],
+      ["", "", ""],
+      ["", "", ""],
+    ],
+    xIn: 1.5,
+    yIn: 1.8,
+    wIn: 7,
+    hIn: 2,
+  };
 }
 
 /** Sizes a new image element to fit within a max box while preserving its real aspect
@@ -210,6 +277,20 @@ export function newImage(dataUrl: string, naturalWidth: number, naturalHeight: n
     wIn,
     hIn,
   };
+}
+
+/** Moves one element forward/backward in the render/stacking order (array order = layer
+ * order, last = frontmost) - DeckEditor.tsx's "Bring forward"/"Send backward". */
+export function reorderElement(elements: SlideElement[], id: string, direction: "forward" | "backward" | "front" | "back"): SlideElement[] {
+  const index = elements.findIndex((el) => el.id === id);
+  if (index === -1) return elements;
+  const next = [...elements];
+  const [el] = next.splice(index, 1);
+  if (direction === "front") next.push(el);
+  else if (direction === "back") next.unshift(el);
+  else if (direction === "forward") next.splice(Math.min(index + 1, next.length), 0, el);
+  else next.splice(Math.max(index - 1, 0), 0, el);
+  return next;
 }
 
 /** Reads the current title/body text back out of a slide's role-tagged elements, for

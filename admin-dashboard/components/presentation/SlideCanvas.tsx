@@ -36,6 +36,7 @@ function StaticElement({ el }: { el: SlideElement }) {
           ...style,
           color: `#${el.color}`,
           fontSize: el.fontSize,
+          fontFamily: el.fontFamily ?? "Arial",
           fontWeight: el.bold ? 700 : 400,
           fontStyle: el.italic ? "italic" : "normal",
           textAlign: el.align ?? "left",
@@ -51,8 +52,38 @@ function StaticElement({ el }: { el: SlideElement }) {
   if (el.type === "shape") {
     return (
       <div
-        style={{ ...style, backgroundColor: `#${el.fill}`, borderRadius: el.shape === "ellipse" ? "50%" : 0 }}
+        style={{
+          ...style,
+          backgroundColor: `#${el.fill}`,
+          opacity: (el.opacity ?? 100) / 100,
+          borderRadius: el.shape === "ellipse" ? "50%" : 0,
+        }}
       />
+    );
+  }
+  if (el.type === "table") {
+    return (
+      <table style={{ ...style, borderCollapse: "collapse", fontSize: 11, tableLayout: "fixed" }}>
+        <tbody>
+          {el.rows.map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) => (
+                <td
+                  key={ci}
+                  className="truncate px-1.5 py-1"
+                  style={{
+                    border: "1px solid #d8deda",
+                    fontWeight: el.headerRow && ri === 0 ? 700 : 400,
+                    backgroundColor: el.headerRow && ri === 0 ? "#f1f5f4" : "transparent",
+                  }}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
@@ -66,7 +97,11 @@ interface EditableProps {
   onSelect: (id: string | null) => void;
   onStartEditing: (id: string) => void;
   onStopEditing: () => void;
-  onElementChange: (id: string, patch: Partial<SlideElement>) => void;
+  /** `coalesce: true` marks a change as part of a continuous edit (typing a character) -
+   * DeckEditor.tsx's undo history only takes one snapshot per coalesced run instead of
+   * one per keystroke, closed out by onStopEditing. Drag/resize/toolbar changes omit it
+   * (each is already exactly one discrete user action, so each gets its own undo step). */
+  onElementChange: (id: string, patch: Partial<SlideElement>, coalesce?: boolean) => void;
 }
 
 function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, onStopEditing, onElementChange }: EditableProps & { el: SlideElement }) {
@@ -107,10 +142,11 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
           }}
           onDoubleClick={() => onStartEditing(el.id)}
           onBlur={onStopEditing}
-          onChange={(e) => onElementChange(el.id, { text: e.target.value })}
+          onChange={(e) => onElementChange(el.id, { text: e.target.value }, true)}
           style={{
             color: `#${el.color}`,
             fontSize: el.fontSize,
+            fontFamily: el.fontFamily ?? "Arial",
             fontWeight: el.bold ? 700 : 400,
             fontStyle: el.italic ? "italic" : "normal",
             textAlign: el.align ?? "left",
@@ -123,8 +159,49 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
         <div
           onMouseDown={() => onSelect(el.id)}
           className="h-full w-full cursor-move"
-          style={{ backgroundColor: `#${el.fill}`, borderRadius: el.shape === "ellipse" ? "50%" : 0 }}
+          style={{
+            backgroundColor: `#${el.fill}`,
+            opacity: (el.opacity ?? 100) / 100,
+            borderRadius: el.shape === "ellipse" ? "50%" : 0,
+          }}
         />
+      ) : el.type === "table" ? (
+        <table
+          onMouseDown={() => onSelect(el.id)}
+          className="h-full w-full cursor-move"
+          style={{ borderCollapse: "collapse", fontSize: 11, tableLayout: "fixed" }}
+        >
+          <tbody>
+            {el.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    style={{
+                      border: "1px solid #d8deda",
+                      fontWeight: el.headerRow && ri === 0 ? 700 : 400,
+                      backgroundColor: el.headerRow && ri === 0 ? "#f1f5f4" : "transparent",
+                      padding: 0,
+                    }}
+                  >
+                    <input
+                      value={cell}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const rows = el.rows.map((r, rri) =>
+                          rri === ri ? r.map((c, cci) => (cci === ci ? e.target.value : c)) : r,
+                        );
+                        onElementChange(el.id, { rows }, true);
+                      }}
+                      className="w-full truncate border-0 bg-transparent px-1.5 py-1 text-inherit outline-none"
+                      style={{ fontWeight: "inherit" }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
