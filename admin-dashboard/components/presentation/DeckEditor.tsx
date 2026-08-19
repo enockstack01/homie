@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import QRCode from "qrcode";
 import {
   type Slide,
   type SlideElement,
   type TextElement,
   type TableElement,
+  type ChartElement,
+  type ImageElement,
   FONT_FAMILIES,
   SHAPE_KINDS,
+  CHART_KINDS,
   blankSlide,
   duplicateSlide,
   duplicateElement,
   newTextBox,
   newShapeOfKind,
   newTable,
+  newChart,
   newImage,
   reorderElement,
   extractPlanFromSlide,
@@ -240,6 +245,13 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
     reader.readAsDataURL(file);
   }
 
+  async function handleInsertQrCode() {
+    const text = window.prompt("URL or text for the QR code:");
+    if (!text?.trim()) return;
+    const dataUrl = await QRCode.toDataURL(text.trim(), { width: 480, margin: 1 });
+    addElement({ ...newImage(dataUrl, 1, 1), wIn: 1.6, hIn: 1.6 });
+  }
+
   function addTableRow(el: TableElement) {
     updateElement(el.id, { rows: [...el.rows, el.rows[0].map(() => "")] });
   }
@@ -253,6 +265,14 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
   function removeTableCol(el: TableElement) {
     if (el.rows[0].length <= 1) return;
     updateElement(el.id, { rows: el.rows.map((r) => r.slice(0, -1)) });
+  }
+
+  function addChartPoint(el: ChartElement) {
+    updateElement(el.id, { labels: [...el.labels, `Item ${el.labels.length + 1}`], values: [...el.values, 1] });
+  }
+  function removeChartPoint(el: ChartElement) {
+    if (el.labels.length <= 1) return;
+    updateElement(el.id, { labels: el.labels.slice(0, -1), values: el.values.slice(0, -1) });
   }
 
   async function aiRewriteSlide(instruction: string) {
@@ -271,20 +291,26 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
   const canRewrite = slide ? extractPlanFromSlide(slide) !== null : false;
   const textEl = selectedElement?.type === "text" ? (selectedElement as TextElement) : null;
   const tableEl = selectedElement?.type === "table" ? (selectedElement as TableElement) : null;
+  const chartEl = selectedElement?.type === "chart" ? (selectedElement as ChartElement) : null;
+  const imageEl = selectedElement?.type === "image" ? (selectedElement as ImageElement) : null;
 
   return (
     <div className="flex gap-4">
       <div className="flex max-h-[640px] shrink-0 flex-col gap-2 overflow-y-auto rounded-md border border-border bg-surface-muted p-2">
         {slides.map((s, i) => (
-          <Thumbnail
-            key={s.id}
-            slide={s}
-            selected={selectedSlide === i}
-            onClick={() => {
-              setSelectedSlide(i);
-              setSelectedElementId(null);
-            }}
-          />
+          <div key={s.id} className="flex flex-col gap-2">
+            {s.section && s.section !== slides[i - 1]?.section && (
+              <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wide text-foreground/50">{s.section}</p>
+            )}
+            <Thumbnail
+              slide={s}
+              selected={selectedSlide === i}
+              onClick={() => {
+                setSelectedSlide(i);
+                setSelectedElementId(null);
+              }}
+            />
+          </div>
         ))}
         <Button variant="secondary" size="sm" onClick={addSlide}>
           + Add slide
@@ -341,6 +367,17 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                 Remove slide
               </Button>
               <ToolbarDivider />
+              <label className="flex items-center gap-1.5 text-xs text-foreground/60">
+                Section
+                <input
+                  value={slide?.section ?? ""}
+                  onChange={(e) => updateSlide(selectedSlide, { ...slide, section: e.target.value || undefined }, true)}
+                  onBlur={stopEditing}
+                  placeholder="e.g. Introduction"
+                  className="w-28 rounded border border-border bg-surface px-1.5 py-1 text-xs outline-none focus:border-primary"
+                />
+              </label>
+              <ToolbarDivider />
               <Button variant="ghost" size="sm" onClick={undo} disabled={past.length === 0} title="Undo (Ctrl+Z)">
                 ↶ Undo
               </Button>
@@ -386,8 +423,14 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
               <Button variant="secondary" size="sm" onClick={() => addElement(newTable())}>
                 + Table
               </Button>
+              <Button variant="secondary" size="sm" onClick={() => addElement(newChart("bar"))}>
+                + Chart
+              </Button>
               <Button variant="secondary" size="sm" onClick={() => imageInputRef.current?.click()}>
                 + Image
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleInsertQrCode}>
+                + QR code
               </Button>
               <input
                 ref={imageInputRef}
@@ -558,6 +601,78 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                       Header row
                     </Button>
                   </div>
+                )}
+
+                {chartEl && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={chartEl.chartKind}
+                      onChange={(e) => updateElement(chartEl.id, { chartKind: e.target.value as ChartElement["chartKind"] })}
+                      className="rounded border border-border bg-surface px-1.5 py-1 text-xs"
+                    >
+                      {CHART_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {k[0].toUpperCase() + k.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    {chartEl.chartKind !== "pie" && (
+                      <div className="flex items-center gap-1">
+                        {TEXT_SWATCHES.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => updateElement(chartEl.id, { color })}
+                            className={`h-5 w-5 rounded-full border ${chartEl.color === color ? "ring-2 ring-primary" : "border-border"}`}
+                            style={{ backgroundColor: `#${color}` }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex max-w-xs flex-wrap items-center gap-1">
+                      {chartEl.labels.map((label, i) => (
+                        <span key={i} className="flex items-center gap-0.5 rounded border border-border bg-surface-muted px-1">
+                          <input
+                            value={label}
+                            onChange={(e) =>
+                              updateElement(chartEl.id, { labels: chartEl.labels.map((l, j) => (j === i ? e.target.value : l)) }, true)
+                            }
+                            className="w-14 border-0 bg-transparent px-0.5 py-0.5 text-xs outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={chartEl.values[i]}
+                            onChange={(e) =>
+                              updateElement(
+                                chartEl.id,
+                                { values: chartEl.values.map((v, j) => (j === i ? Number(e.target.value) : v)) },
+                                true,
+                              )
+                            }
+                            className="w-12 border-0 bg-transparent px-0.5 py-0.5 text-xs outline-none"
+                          />
+                        </span>
+                      ))}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => addChartPoint(chartEl)}>
+                      + Point
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeChartPoint(chartEl)} disabled={chartEl.labels.length <= 1}>
+                      - Point
+                    </Button>
+                  </div>
+                )}
+
+                {imageEl && (
+                  <label className="flex items-center gap-1.5 text-xs text-foreground/60">
+                    Alt text
+                    <input
+                      value={imageEl.alt ?? ""}
+                      onChange={(e) => updateElement(imageEl.id, { alt: e.target.value }, true)}
+                      placeholder="Describe this image for screen readers"
+                      className="w-48 rounded border border-border bg-surface px-1.5 py-1 text-xs outline-none focus:border-primary"
+                    />
+                  </label>
                 )}
 
                 <ToolbarDivider />

@@ -88,8 +88,19 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
             autoPage: false,
           },
         );
+      } else if (el.type === "chart") {
+        const chartType = pres.ChartType[el.chartKind];
+        s.addChart(chartType, [{ name: "Series 1", labels: el.labels, values: el.values }], {
+          x: el.xIn,
+          y: el.yIn,
+          w: el.wIn,
+          h: el.hIn,
+          showLegend: false,
+          showTitle: false,
+          ...(el.chartKind === "pie" ? {} : { chartColors: [el.color] }),
+        });
       } else {
-        s.addImage({ data: el.dataUrl, x: el.xIn, y: el.yIn, w: el.wIn, h: el.hIn });
+        s.addImage({ data: el.dataUrl, x: el.xIn, y: el.yIn, w: el.wIn, h: el.hIn, altText: el.alt });
       }
     }
   }

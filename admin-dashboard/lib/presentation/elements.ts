@@ -103,6 +103,10 @@ export interface ShapeElement extends BaseElement {
 export interface ImageElement extends BaseElement {
   type: "image";
   dataUrl: string;
+  /** Alt text for screen readers, exported via PptxGenJS's altText - the one real,
+   * honest piece of "Accessibility Checker" this app has (a full checker that scans a
+   * whole deck for issues is a bigger, separate feature this pass doesn't build). */
+  alt?: string;
 }
 
 export interface TableElement extends BaseElement {
@@ -111,7 +115,22 @@ export interface TableElement extends BaseElement {
   headerRow?: boolean;
 }
 
-export type SlideElement = TextElement | ShapeElement | ImageElement | TableElement;
+export const CHART_KINDS = ["bar", "line", "pie"] as const;
+export type ChartKind = (typeof CHART_KINDS)[number];
+
+/** Deliberately single-series (one label + one value per row) rather than PowerPoint's
+ * full multi-series/linked-Excel-data model - a plain "small chart from a short table"
+ * covers the common case (a handful of stats on a slide) without needing a spreadsheet
+ * editor built into the deck editor. */
+export interface ChartElement extends BaseElement {
+  type: "chart";
+  chartKind: ChartKind;
+  labels: string[];
+  values: number[];
+  color: string;
+}
+
+export type SlideElement = TextElement | ShapeElement | ImageElement | TableElement | ChartElement;
 
 export interface Slide {
   id: string;
@@ -120,6 +139,9 @@ export interface Slide {
   /** Speaker notes - exported via PptxGenJS's addNotes (lib/presentation/renderDeck.ts),
    * never shown on the slide itself. */
   notes?: string;
+  /** Groups slides in DeckEditor.tsx's thumbnail rail (PowerPoint's "Section
+   * organization") - undefined means "no section", not an error. */
+  section?: string;
 }
 
 let counter = 0;
@@ -407,6 +429,21 @@ export function newTable(): TableElement {
     yIn: 1.8,
     wIn: 7,
     hIn: 2,
+  };
+}
+
+export function newChart(chartKind: ChartKind = "bar"): ChartElement {
+  return {
+    id: newId(),
+    type: "chart",
+    chartKind,
+    labels: ["Q1", "Q2", "Q3", "Q4"],
+    values: [10, 22, 18, 30],
+    color: PRIMARY,
+    xIn: 1.5,
+    yIn: 1.5,
+    wIn: 7,
+    hIn: 3,
   };
 }
 

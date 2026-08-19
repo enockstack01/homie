@@ -2,8 +2,79 @@
 
 import { Rnd as RndClass, type Props as RndProps } from "react-rnd";
 import type { ComponentType, CSSProperties } from "react";
-import { SHAPE_KINDS, type Slide, type SlideElement, type ShapeElement } from "@/lib/presentation/elements";
+import { SHAPE_KINDS, type Slide, type SlideElement, type ShapeElement, type ChartElement } from "@/lib/presentation/elements";
 import { DECK_LAYOUT, PX_PER_INCH } from "@/lib/presentation/layout";
+
+const PIE_PALETTE = ["005C3D", "F8B712", "6D28D9", "075985", "9A3412", "DC2626", "1D4ED8", "334155"];
+
+/** Lightweight inline-SVG preview of a ChartElement - not pixel-identical to the real
+ * chart PptxGenJS's addChart renders (see renderDeck.ts), but a real, proportionally
+ * accurate bar/line/pie so the canvas shows what's actually being built rather than a
+ * placeholder icon. */
+function ChartPreview({ el }: { el: ChartElement }) {
+  const w = 300;
+  const h = 180;
+  const max = Math.max(...el.values, 1);
+
+  if (el.chartKind === "pie") {
+    const total = el.values.reduce((a, b) => a + b, 0) || 1;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 - 4;
+    // Cumulative start angle per slice, computed up front rather than mutated inside the
+    // render map below (each slice's start = -90 plus the sum of every slice before it).
+    const startAngles = el.values.reduce<number[]>((acc, v, i) => {
+      acc.push(i === 0 ? -90 : acc[i - 1] + (el.values[i - 1] / total) * 360);
+      return acc;
+    }, []);
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" className="h-full w-full">
+        {el.values.map((v, i) => {
+          const slice = (v / total) * 360;
+          const start = (startAngles[i] * Math.PI) / 180;
+          const end = ((startAngles[i] + slice) * Math.PI) / 180;
+          const x1 = cx + r * Math.cos(start);
+          const y1 = cy + r * Math.sin(start);
+          const x2 = cx + r * Math.cos(end);
+          const y2 = cy + r * Math.sin(end);
+          const largeArc = slice > 180 ? 1 : 0;
+          return (
+            <path
+              key={i}
+              d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z`}
+              fill={`#${PIE_PALETTE[i % PIE_PALETTE.length]}`}
+            />
+          );
+        })}
+      </svg>
+    );
+  }
+
+  const stepX = w / Math.max(el.labels.length - (el.chartKind === "line" ? 1 : 0), 1);
+  if (el.chartKind === "line") {
+    const points = el.values.map((v, i) => `${i * stepX},${h - (v / max) * (h - 16) - 4}`).join(" ");
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
+        <polyline points={points} fill="none" stroke={`#${el.color}`} strokeWidth={3} />
+        {el.values.map((v, i) => (
+          <circle key={i} cx={i * stepX} cy={h - (v / max) * (h - 16) - 4} r={3.5} fill={`#${el.color}`} />
+        ))}
+      </svg>
+    );
+  }
+
+  const barW = stepX * 0.6;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
+      {el.values.map((v, i) => {
+        const barH = (v / max) * (h - 16);
+        return (
+          <rect key={i} x={i * stepX + (stepX - barW) / 2} y={h - barH} width={barW} height={barH} fill={`#${el.color}`} rx={2} />
+        );
+      })}
+    </svg>
+  );
+}
 
 const SHAPE_CLIP: Partial<Record<ShapeElement["shape"], string>> = Object.fromEntries(
   SHAPE_KINDS.filter((k): k is typeof k & { clip: string } => "clip" in k).map((k) => [k.id, k.clip]),
@@ -106,6 +177,13 @@ function StaticElement({ el }: { el: SlideElement }) {
           ))}
         </tbody>
       </table>
+    );
+  }
+  if (el.type === "chart") {
+    return (
+      <div style={style}>
+        <ChartPreview el={el} />
+      </div>
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
@@ -216,6 +294,10 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
             ))}
           </tbody>
         </table>
+      ) : el.type === "chart" ? (
+        <div onMouseDown={() => onSelect(el.id)} className="h-full w-full cursor-move">
+          <ChartPreview el={el} />
+        </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
