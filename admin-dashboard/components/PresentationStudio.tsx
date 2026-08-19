@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { TEMPLATES, type Template, type FlyerContent } from "@/lib/presentation/templates";
-import { type Slide, deckFromPlans, titleSlide } from "@/lib/presentation/elements";
+import { type Slide, deckFromPlans, titleSlide, TEMPLATE_STYLES } from "@/lib/presentation/elements";
 import { DECK_THEMES } from "@/lib/presentation/layout";
 import { Button } from "@/components/ui/Button";
 import { DeckEditor } from "@/components/presentation/DeckEditor";
@@ -35,7 +35,7 @@ function TemplateThumbnail({ template, primary, accent }: { template: Template; 
   if (template.kind === "deck") {
     return (
       <ScaledPreview width={DECK_CANVAS_WIDTH} height={DECK_CANVAS_HEIGHT}>
-        <SlideCanvas slide={titleSlide(template.name, primary, accent)} editable={false} />
+        <SlideCanvas slide={titleSlide(template.name, primary, accent, TEMPLATE_STYLES[template.id])} editable={false} />
       </ScaledPreview>
     );
   }
@@ -92,7 +92,12 @@ export function PresentationStudio() {
   function openTemplate(t: Template) {
     setEditing(
       t.kind === "deck"
-        ? { kind: "deck", title: t.name, slides: deckFromPlans(t.name, t.slides, theme.primary, theme.accent), sourceText: "" }
+        ? {
+            kind: "deck",
+            title: t.name,
+            slides: deckFromPlans(t.name, t.slides, theme.primary, theme.accent, TEMPLATE_STYLES[t.id]),
+            sourceText: "",
+          }
         : { kind: "flyer", title: t.name, content: t.content, sourceText: "" },
     );
   }

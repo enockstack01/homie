@@ -1,6 +1,8 @@
 import PptxGenJS from "pptxgenjs";
-import type { Slide } from "./elements";
+import { SHAPE_KINDS, type Slide } from "./elements";
 import { DECK_LAYOUT } from "./layout";
+
+const PPTX_SHAPE_TYPE: Record<string, string> = Object.fromEntries(SHAPE_KINDS.map((k) => [k.id, k.pptx]));
 
 // A deck is now a plain array of freeform Slide/SlideElement objects (see
 // lib/presentation/elements.ts) rather than a fixed {title, bullets} layout - this
@@ -38,14 +40,33 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
           lineSpacingMultiple: 1.3,
         });
       } else if (el.type === "shape") {
-        s.addShape(el.shape === "ellipse" ? pres.ShapeType.ellipse : pres.ShapeType.rect, {
-          x: el.xIn,
-          y: el.yIn,
-          w: el.wIn,
-          h: el.hIn,
-          fill: { color: el.fill, transparency: 100 - (el.opacity ?? 100) },
-          line: { type: "none" },
-        });
+        // PptxGenJS types shapeName as a big string-literal union (SHAPE_NAME) - this is
+        // built from pres.ShapeType's own runtime values via PPTX_SHAPE_TYPE, so it's
+        // always one of those literals in practice; TS just can't see that through a
+        // dynamic Record lookup.
+        const shapeType = (pres.ShapeType as unknown as Record<string, string>)[
+          PPTX_SHAPE_TYPE[el.shape] ?? "rect"
+        ] as Parameters<typeof s.addShape>[0];
+        if (el.shape === "line") {
+          s.addShape(shapeType, {
+            x: el.xIn,
+            y: el.yIn,
+            w: el.wIn,
+            h: el.hIn,
+            line: { color: el.fill, width: 2, transparency: 100 - (el.opacity ?? 100) },
+            rotate: el.rotate,
+          });
+        } else {
+          s.addShape(shapeType, {
+            x: el.xIn,
+            y: el.yIn,
+            w: el.wIn,
+            h: el.hIn,
+            fill: { color: el.fill, transparency: 100 - (el.opacity ?? 100) },
+            line: { type: "none" },
+            rotate: el.rotate,
+          });
+        }
       } else if (el.type === "table") {
         s.addTable(
           el.rows.map((row, ri) =>

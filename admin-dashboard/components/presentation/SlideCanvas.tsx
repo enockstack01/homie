@@ -1,9 +1,40 @@
 "use client";
 
 import { Rnd as RndClass, type Props as RndProps } from "react-rnd";
-import type { ComponentType } from "react";
-import type { Slide, SlideElement } from "@/lib/presentation/elements";
+import type { ComponentType, CSSProperties } from "react";
+import { SHAPE_KINDS, type Slide, type SlideElement, type ShapeElement } from "@/lib/presentation/elements";
 import { DECK_LAYOUT, PX_PER_INCH } from "@/lib/presentation/layout";
+
+const SHAPE_CLIP: Partial<Record<ShapeElement["shape"], string>> = Object.fromEntries(
+  SHAPE_KINDS.filter((k): k is typeof k & { clip: string } => "clip" in k).map((k) => [k.id, k.clip]),
+);
+
+/** CSS approximation of a ShapeElement, shared by the static (thumbnail) and editable
+ * (main canvas) renders so the two visual paths can't drift apart. rect/roundRect/line
+ * need no clip-path; ellipse/donut use border-radius; everything else (triangle,
+ * diamond, star, arrows, ...) uses the matching clip-path polygon from SHAPE_KINDS. */
+export function shapeStyle(el: ShapeElement): CSSProperties {
+  const opacity = (el.opacity ?? 100) / 100;
+  const transform = el.rotate ? `rotate(${el.rotate}deg)` : undefined;
+  if (el.shape === "donut") {
+    return {
+      borderRadius: "50%",
+      border: `${Math.max(4, Math.min(el.wIn, el.hIn) * PX_PER_INCH * 0.16)}px solid #${el.fill}`,
+      backgroundColor: "transparent",
+      opacity,
+      transform,
+      boxSizing: "border-box",
+    };
+  }
+  if (el.shape === "ellipse") {
+    return { backgroundColor: `#${el.fill}`, opacity, borderRadius: "50%", transform };
+  }
+  if (el.shape === "roundRect") {
+    return { backgroundColor: `#${el.fill}`, opacity, borderRadius: 12, transform };
+  }
+  const clip = SHAPE_CLIP[el.shape];
+  return { backgroundColor: `#${el.fill}`, opacity, clipPath: clip, transform };
+}
 
 // react-rnd's own type definitions don't satisfy React 19's stricter JSX.ElementType
 // check (a known ecosystem-wide friction point for class components under React 19's
@@ -50,16 +81,7 @@ function StaticElement({ el }: { el: SlideElement }) {
     );
   }
   if (el.type === "shape") {
-    return (
-      <div
-        style={{
-          ...style,
-          backgroundColor: `#${el.fill}`,
-          opacity: (el.opacity ?? 100) / 100,
-          borderRadius: el.shape === "ellipse" ? "50%" : 0,
-        }}
-      />
-    );
+    return <div style={{ ...style, ...shapeStyle(el) }} />;
   }
   if (el.type === "table") {
     return (
@@ -156,15 +178,7 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
           className="h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none"
         />
       ) : el.type === "shape" ? (
-        <div
-          onMouseDown={() => onSelect(el.id)}
-          className="h-full w-full cursor-move"
-          style={{
-            backgroundColor: `#${el.fill}`,
-            opacity: (el.opacity ?? 100) / 100,
-            borderRadius: el.shape === "ellipse" ? "50%" : 0,
-          }}
-        />
+        <div onMouseDown={() => onSelect(el.id)} className="h-full w-full cursor-move" style={shapeStyle(el)} />
       ) : el.type === "table" ? (
         <table
           onMouseDown={() => onSelect(el.id)}
