@@ -24,6 +24,8 @@ import {
   extractPlanFromSlide,
   applyPlanToSlide,
 } from "@/lib/presentation/elements";
+import { DECK_LAYOUT } from "@/lib/presentation/layout";
+import { removeBackground } from "@/lib/presentation/imageTools";
 import { Button } from "@/components/ui/Button";
 import { AiRewriteControl } from "./AiRewriteControl";
 import { SlideCanvas, shapeStyle, DECK_CANVAS_WIDTH, DECK_CANVAS_HEIGHT } from "./SlideCanvas";
@@ -91,7 +93,16 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [shapePickerOpen, setShapePickerOpen] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
+  const [exportBusy, setExportBusy] = useState<"png" | "pdf" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  // Hidden off-screen renders of every slide (see the JSX near the bottom), used only to
+  // rasterize a real, chrome-free (no selection outlines/resize handles) capture for the
+  // PNG/PDF export buttons - the on-screen canvas isn't captured directly since it's the
+  // interactive react-rnd version.
+  const exportNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Selecting an element jumps to the Format tab, mirroring PowerPoint's contextual
   // "Shape/Picture/Table Format" tabs auto-activating on selection - deselecting doesn't
@@ -243,6 +254,63 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+  }
+
+  async function handleRemoveBackground(el: ImageElement) {
+    setBgError(null);
+    setRemovingBg(true);
+    try {
+      const dataUrl = await removeBackground(el.dataUrl);
+      updateElement(el.id, { dataUrl });
+    } catch (err) {
+      setBgError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRemovingBg(false);
+    }
+  }
+
+  async function captureSlide(id: string) {
+    const node = exportNodesRef.current.get(id);
+    if (!node) return null;
+    const { default: html2canvas } = await import("html2canvas");
+    return html2canvas(node, { scale: 2, backgroundColor: null });
+  }
+
+  async function handleExportPng() {
+    setExportError(null);
+    setExportBusy("png");
+    try {
+      const canvas = await captureSlide(slide.id);
+      if (!canvas) throw new Error("Couldn't render this slide.");
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `slide-${selectedSlide + 1}.png`;
+      a.click();
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExportBusy(null);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportError(null);
+    setExportBusy("pdf");
+    try {
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: [DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn] });
+      for (let i = 0; i < slides.length; i++) {
+        const canvas = await captureSlide(slides[i].id);
+        if (!canvas) continue;
+        if (i > 0) pdf.addPage([DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn], "landscape");
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn);
+      }
+      pdf.save("deck.pdf");
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExportBusy(null);
+    }
   }
 
   async function handleInsertQrCode() {
@@ -461,9 +529,17 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                   />
                 ))}
               </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => commit(slides.map((s) => ({ ...s, background: slide.background })))}
+                title="Slide Master-lite: recolors every slide's background to match this one"
+              >
+                Apply to all slides
+              </Button>
               <p className="text-xs text-foreground/40">
-                A whole deck&apos;s theme is picked once, before opening a template or generating with AI (see the theme picker above the
-                gallery) - this only recolors the current slide.
+                A whole deck&apos;s theme (used for text/decoration colors, not just background) is picked once, before opening a template or
+                generating with AI - see the theme picker above the gallery.
               </p>
             </div>
           )}
@@ -527,6 +603,27 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                         />
                       ))}
                     </div>
+                    <select
+                      value={textEl.listStyle ?? "none"}
+                      onChange={(e) => updateElement(textEl.id, { listStyle: e.target.value as TextElement["listStyle"] })}
+                      className="rounded border border-border bg-surface px-1.5 py-1 text-xs"
+                      title="List style"
+                    >
+                      <option value="none">No list</option>
+                      <option value="bullet">• Bullets</option>
+                      <option value="number">1. Numbered</option>
+                    </select>
+                    <Button variant={textEl.shadow ? "primary" : "ghost"} size="sm" onClick={() => updateElement(textEl.id, { shadow: !textEl.shadow })} title="Drop shadow">
+                      S
+                    </Button>
+                    <Button
+                      variant={textEl.outline ? "primary" : "ghost"}
+                      size="sm"
+                      onClick={() => updateElement(textEl.id, { outline: !textEl.outline })}
+                      title="Outline (WordArt-style)"
+                    >
+                      O
+                    </Button>
                   </>
                 )}
 
@@ -664,15 +761,27 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                 )}
 
                 {imageEl && (
-                  <label className="flex items-center gap-1.5 text-xs text-foreground/60">
-                    Alt text
-                    <input
-                      value={imageEl.alt ?? ""}
-                      onChange={(e) => updateElement(imageEl.id, { alt: e.target.value }, true)}
-                      placeholder="Describe this image for screen readers"
-                      className="w-48 rounded border border-border bg-surface px-1.5 py-1 text-xs outline-none focus:border-primary"
-                    />
-                  </label>
+                  <>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground/60">
+                      Alt text
+                      <input
+                        value={imageEl.alt ?? ""}
+                        onChange={(e) => updateElement(imageEl.id, { alt: e.target.value }, true)}
+                        placeholder="Describe this image for screen readers"
+                        className="w-48 rounded border border-border bg-surface px-1.5 py-1 text-xs outline-none focus:border-primary"
+                      />
+                    </label>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleRemoveBackground(imageEl)}
+                      disabled={removingBg}
+                      title="Keys out the color at the image's corners - best for a plain/solid background, not a real subject-detection model"
+                    >
+                      {removingBg ? "Removing..." : "Remove background"}
+                    </Button>
+                    {bgError && <p className="text-xs text-red-700 dark:text-red-400">{bgError}</p>}
+                  </>
                 )}
 
                 <ToolbarDivider />
@@ -700,6 +809,13 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
               <Button variant="secondary" size="sm" onClick={() => setNotesOpen((v) => !v)}>
                 📝 {notesOpen ? "Hide" : "Show"} speaker notes
               </Button>
+              <Button variant="secondary" size="sm" onClick={handleExportPng} disabled={exportBusy !== null}>
+                {exportBusy === "png" ? "Rendering..." : "Export slide as PNG"}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleExportPdf} disabled={exportBusy !== null}>
+                {exportBusy === "pdf" ? "Rendering..." : "Export deck as PDF"}
+              </Button>
+              {exportError && <p className="text-xs text-red-700 dark:text-red-400">{exportError}</p>}
               <p className="text-xs text-foreground/40">
                 Click an element to select it, drag its edges to resize, double-click text or a table cell to type. Delete/Backspace removes
                 the selected element, Ctrl+Z / Ctrl+Shift+Z undo/redo, Escape deselects.
@@ -736,6 +852,23 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
             />
           </div>
         )}
+      </div>
+
+      {/* Off-screen, chrome-free static renders of every slide - see captureSlide, used
+          only by the PNG/PDF export buttons above so the exported image never includes
+          react-rnd's selection outlines/resize handles. */}
+      <div style={{ position: "fixed", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
+        {slides.map((s) => (
+          <div
+            key={s.id}
+            ref={(el) => {
+              if (el) exportNodesRef.current.set(s.id, el);
+              else exportNodesRef.current.delete(s.id);
+            }}
+          >
+            <SlideCanvas slide={s} editable={false} />
+          </div>
+        ))}
       </div>
     </div>
   );

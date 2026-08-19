@@ -25,7 +25,7 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
 
     for (const el of slide.elements) {
       if (el.type === "text") {
-        s.addText(el.text, {
+        const textOpts = {
           x: el.xIn,
           y: el.yIn,
           w: el.wIn,
@@ -36,9 +36,30 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
           italic: el.italic,
           align: el.align,
           fontFace: el.fontFamily ?? "Arial",
-          valign: "top",
+          valign: "top" as const,
           lineSpacingMultiple: 1.3,
-        });
+          shadow: el.shadow ? { type: "outer" as const, color: "000000", opacity: 0.45, blur: 3, offset: 2, angle: 45 } : undefined,
+          outline: el.outline ? { color: el.color, size: 0.75 } : undefined,
+        };
+        // Real PptxGenJS bullet/number formatting (not literal "• " characters) - each
+        // line becomes its own paragraph, with leading tabs (see SlideCanvas.tsx's
+        // Tab/Shift+Tab handling) setting that line's indent level and then stripped
+        // from the visible text.
+        if (el.listStyle && el.listStyle !== "none") {
+          const paragraphs = el.text.split("\n").map((line) => {
+            const indentLevel = Math.min(4, line.match(/^\t*/)?.[0].length ?? 0);
+            return {
+              text: line.replace(/^\t*/, ""),
+              options: {
+                bullet: el.listStyle === "number" ? { type: "number" as const, numberType: "arabicPeriod" as const } : true,
+                indentLevel,
+              },
+            };
+          });
+          s.addText(paragraphs, textOpts);
+        } else {
+          s.addText(el.text, textOpts);
+        }
       } else if (el.type === "shape") {
         // PptxGenJS types shapeName as a big string-literal union (SHAPE_NAME) - this is
         // built from pres.ShapeType's own runtime values via PPTX_SHAPE_TYPE, so it's

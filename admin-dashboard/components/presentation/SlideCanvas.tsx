@@ -1,11 +1,52 @@
 "use client";
 
 import { Rnd as RndClass, type Props as RndProps } from "react-rnd";
-import type { ComponentType, CSSProperties } from "react";
-import { SHAPE_KINDS, type Slide, type SlideElement, type ShapeElement, type ChartElement } from "@/lib/presentation/elements";
+import { useLayoutEffect, useRef, type ComponentType, type CSSProperties, type KeyboardEvent } from "react";
+import { SHAPE_KINDS, type Slide, type SlideElement, type ShapeElement, type ChartElement, type TextElement } from "@/lib/presentation/elements";
 import { DECK_LAYOUT, PX_PER_INCH } from "@/lib/presentation/layout";
 
 const PIE_PALETTE = ["005C3D", "F8B712", "6D28D9", "075985", "9A3412", "DC2626", "1D4ED8", "334155"];
+
+function textElStyle(el: TextElement): CSSProperties {
+  return {
+    color: `#${el.color}`,
+    fontSize: el.fontSize,
+    fontFamily: el.fontFamily ?? "Arial",
+    fontWeight: el.bold ? 700 : 400,
+    fontStyle: el.italic ? "italic" : "normal",
+    textAlign: el.align ?? "left",
+    lineHeight: 1.3,
+    textShadow: el.shadow ? "1px 1px 3px rgba(0,0,0,0.45)" : undefined,
+    WebkitTextStroke: el.outline ? `0.6px #${el.color}` : undefined,
+  };
+}
+
+/** Non-editing display of a TextElement's content - plain pre-wrapped text for freeform
+ * boxes (listStyle "none"), or a real bullet/number-decorated list (each line one item,
+ * leading tabs setting that line's indent level - the same encoding
+ * lib/presentation/renderDeck.ts reads to build real PptxGenJS paragraphs, not literal
+ * "•" characters). Used for both the read-only thumbnail and the main canvas's
+ * not-currently-being-typed-into state; swapped for a plain <textarea> while actively
+ * editing, since a styled list can't host a native text cursor. */
+function ListText({ el }: { el: TextElement }) {
+  if (!el.listStyle || el.listStyle === "none") {
+    return <div style={{ ...textElStyle(el), whiteSpace: "pre-wrap" }}>{el.text}</div>;
+  }
+  const lines = el.text.split("\n").map((line) => {
+    const indent = Math.min(4, line.match(/^\t*/)?.[0].length ?? 0);
+    return { text: line.replace(/^\t*/, ""), indent };
+  });
+  return (
+    <div style={textElStyle(el)}>
+      {lines.map((line, i) => (
+        <div key={i} style={{ paddingLeft: line.indent * 16, display: "flex", gap: 6 }}>
+          <span>{el.listStyle === "number" ? `${i + 1}.` : "•"}</span>
+          <span style={{ whiteSpace: "pre-wrap" }}>{line.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** Lightweight inline-SVG preview of a ChartElement - not pixel-identical to the real
  * chart PptxGenJS's addChart renders (see renderDeck.ts), but a real, proportionally
@@ -133,21 +174,8 @@ function StaticElement({ el }: { el: SlideElement }) {
   };
   if (el.type === "text") {
     return (
-      <div
-        style={{
-          ...style,
-          color: `#${el.color}`,
-          fontSize: el.fontSize,
-          fontFamily: el.fontFamily ?? "Arial",
-          fontWeight: el.bold ? 700 : 400,
-          fontStyle: el.italic ? "italic" : "normal",
-          textAlign: el.align ?? "left",
-          whiteSpace: "pre-wrap",
-          lineHeight: 1.3,
-          overflow: "hidden",
-        }}
-      >
-        {el.text}
+      <div style={{ ...style, overflow: "hidden" }}>
+        <ListText el={el} />
       </div>
     );
   }
@@ -208,6 +236,33 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
   const selected = selectedId === el.id;
   const editing = editingId === el.id;
 
+  // Tab/Shift+Tab indent one text line at a time (lib/presentation/renderDeck.ts reads
+  // leading tabs as that line's list indent level) - restoring the caret manually since
+  // programmatically editing a controlled <textarea>'s value doesn't preserve it on its own.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingCaretRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (pendingCaretRef.current !== null && textareaRef.current) {
+      textareaRef.current.selectionStart = textareaRef.current.selectionEnd = pendingCaretRef.current;
+      pendingCaretRef.current = null;
+    }
+  });
+
+  function handleTextKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    const { selectionStart, value } = e.currentTarget;
+    const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+    if (e.shiftKey) {
+      if (value[lineStart] !== "\t") return;
+      pendingCaretRef.current = selectionStart - 1;
+      onElementChange(el.id, { text: value.slice(0, lineStart) + value.slice(lineStart + 1) }, true);
+    } else {
+      pendingCaretRef.current = selectionStart + 1;
+      onElementChange(el.id, { text: value.slice(0, lineStart) + "\t" + value.slice(lineStart) }, true);
+    }
+  }
+
   return (
     <Rnd
       bounds="parent"
@@ -229,32 +284,30 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
       className="group/el hover:outline hover:outline-1 hover:outline-primary/40"
     >
       {el.type === "text" ? (
-        <textarea
-          value={el.text}
-          readOnly={!editing}
-          autoFocus={editing}
-          onFocus={(e) => (editing ? e.target.select() : undefined)}
-          onMouseDown={(e) => {
-            if (!editing) {
+        editing ? (
+          <textarea
+            ref={textareaRef}
+            value={el.text}
+            autoFocus
+            onFocus={(e) => e.target.select()}
+            onKeyDown={handleTextKeyDown}
+            onBlur={onStopEditing}
+            onChange={(e) => onElementChange(el.id, { text: e.target.value }, true)}
+            style={{ ...textElStyle(el), cursor: "text" }}
+            className="h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none"
+          />
+        ) : (
+          <div
+            onMouseDown={(e) => {
               e.preventDefault();
               onSelect(el.id);
-            }
-          }}
-          onDoubleClick={() => onStartEditing(el.id)}
-          onBlur={onStopEditing}
-          onChange={(e) => onElementChange(el.id, { text: e.target.value }, true)}
-          style={{
-            color: `#${el.color}`,
-            fontSize: el.fontSize,
-            fontFamily: el.fontFamily ?? "Arial",
-            fontWeight: el.bold ? 700 : 400,
-            fontStyle: el.italic ? "italic" : "normal",
-            textAlign: el.align ?? "left",
-            lineHeight: 1.3,
-            cursor: editing ? "text" : "move",
-          }}
-          className="h-full w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none"
-        />
+            }}
+            onDoubleClick={() => onStartEditing(el.id)}
+            className="h-full w-full cursor-move overflow-hidden"
+          >
+            <ListText el={el} />
+          </div>
+        )
       ) : el.type === "shape" ? (
         <div onMouseDown={() => onSelect(el.id)} className="h-full w-full cursor-move" style={shapeStyle(el)} />
       ) : el.type === "table" ? (

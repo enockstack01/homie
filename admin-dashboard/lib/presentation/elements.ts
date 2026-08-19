@@ -74,6 +74,12 @@ export interface BaseElement {
 /** `role` marks an element as "the thing AI rewrite updates" (see DeckEditor.tsx's
  * extractPlanFromSlide/applyPlanToSlide) - freeform elements added by the user (a text
  * box, a shape, an image, a table) have no role and are left untouched by AI rewrite. */
+/** Real PptxGenJS bullet/number formatting, not literal "• " characters typed into the
+ * string - lines in `text` are one list item each; a line's leading tab characters set
+ * its indent level (PowerPoint's "multiple levels"), stripped from the visible text.
+ * "none" (the default) renders `text` as plain paragraphs, for titles/freeform boxes. */
+export type ListStyle = "none" | "bullet" | "number";
+
 export interface TextElement extends BaseElement {
   type: "text";
   role?: "title" | "body";
@@ -84,6 +90,11 @@ export interface TextElement extends BaseElement {
   bold?: boolean;
   italic?: boolean;
   align?: TextAlign;
+  listStyle?: ListStyle;
+  /** WordArt-lite text effects - a real drop shadow / stroke outline via PptxGenJS's own
+   * `shadow`/`outline` text options, not a full WordArt style gallery. */
+  shadow?: boolean;
+  outline?: boolean;
 }
 
 export interface ShapeElement extends BaseElement {
@@ -326,7 +337,8 @@ export function slideFromPlan(plan: SlidePlan, primary: string = PRIMARY, accent
         id: newId(),
         type: "text",
         role: "body",
-        text: plan.bullets.map((b) => `• ${b}`).join("\n"),
+        text: plan.bullets.join("\n"),
+        listStyle: "bullet",
         xIn: DECK_BULLETS_BOX.xIn,
         yIn: DECK_BULLETS_BOX.yIn,
         wIn: DECK_BULLETS_BOX.wIn,
@@ -508,7 +520,7 @@ export function applyPlanToSlide(slide: Slide, plan: SlidePlan): Slide {
     elements: slide.elements.map((el) => {
       if (el.type !== "text") return el;
       if (el.role === "title") return { ...el, text: plan.title };
-      if (el.role === "body") return { ...el, text: plan.bullets.map((b) => `• ${b}`).join("\n") };
+      if (el.role === "body") return { ...el, text: plan.bullets.join("\n") };
       return el;
     }),
   };
