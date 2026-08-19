@@ -1,18 +1,56 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { TEMPLATES, type Template, type FlyerContent } from "@/lib/presentation/templates";
-import type { SlidePlan } from "@/lib/presentation/outline";
+import { type Slide, deckFromPlans, titleSlide } from "@/lib/presentation/elements";
 import { Button } from "@/components/ui/Button";
 import { DeckEditor } from "@/components/presentation/DeckEditor";
 import { FlyerEditor } from "@/components/presentation/FlyerEditor";
+import { SlideCanvas, DECK_CANVAS_WIDTH, DECK_CANVAS_HEIGHT } from "@/components/presentation/SlideCanvas";
+import { FlyerCanvas, FLYER_CANVAS_WIDTH, FLYER_CANVAS_HEIGHT } from "@/components/presentation/FlyerCanvas";
 
 type EditorState =
-  | { kind: "deck"; title: string; slides: SlidePlan[]; sourceText: string }
+  | { kind: "deck"; title: string; slides: Slide[]; sourceText: string }
   | { kind: "flyer"; title: string; content: FlyerContent; sourceText: string };
 
 const inputClass =
   "mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:outline-none";
+
+const CARD_THUMB_WIDTH = 220;
+
+function ScaledPreview({ width, height, children }: { width: number; height: number; children: ReactNode }) {
+  const scale = CARD_THUMB_WIDTH / width;
+  return (
+    <div
+      className="mx-auto overflow-hidden rounded border border-border"
+      style={{ width: width * scale, height: height * scale }}
+    >
+      <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: "top left" }}>{children}</div>
+    </div>
+  );
+}
+
+function TemplateThumbnail({ template }: { template: Template }) {
+  if (template.kind === "deck") {
+    return (
+      <ScaledPreview width={DECK_CANVAS_WIDTH} height={DECK_CANVAS_HEIGHT}>
+        <SlideCanvas slide={titleSlide(template.name)} editable={false} />
+      </ScaledPreview>
+    );
+  }
+  return (
+    <ScaledPreview width={FLYER_CANVAS_WIDTH} height={FLYER_CANVAS_HEIGHT}>
+      <FlyerCanvas
+        headline={template.content.headline}
+        subheadline={template.content.subheadline}
+        body={template.content.body}
+        cta={template.content.cta}
+        footer={template.content.footer}
+        editable={false}
+      />
+    </ScaledPreview>
+  );
+}
 
 function downloadBlob(blob: Blob, fallbackName: string, disposition: string | null) {
   const match = (disposition ?? "").match(/filename="([^"]+)"/);
@@ -27,9 +65,11 @@ function downloadBlob(blob: Blob, fallbackName: string, disposition: string | nu
 
 /** The whole Homie Presentation experience (see app/apps/presentation/page.tsx for the
  * server-rendered account-status shell around this): pick a template or generate one
- * with AI (billed - see app/api/presentation/generate/route.ts), land in a real online
- * editor (DeckEditor/FlyerEditor - entirely free, local state), and export to .pptx any
- * time (also free - app/api/presentation/export/route.ts never calls the AI gateway). */
+ * with AI (billed - see app/api/presentation/generate/route.ts), land in a real,
+ * Canva-style freeform editor (DeckEditor drags/resizes/edits real positioned elements
+ * via react-rnd; FlyerEditor is the simpler single-page click-to-edit canvas) - entirely
+ * free, local state - and export to .pptx any time (also free -
+ * app/api/presentation/export/route.ts never calls the AI gateway). */
 export function PresentationStudio() {
   const [editing, setEditing] = useState<EditorState | null>(null);
 
@@ -49,7 +89,7 @@ export function PresentationStudio() {
   function openTemplate(t: Template) {
     setEditing(
       t.kind === "deck"
-        ? { kind: "deck", title: t.name, slides: t.slides, sourceText: "" }
+        ? { kind: "deck", title: t.name, slides: deckFromPlans(t.name, t.slides), sourceText: "" }
         : { kind: "flyer", title: t.name, content: t.content, sourceText: "" },
     );
   }
@@ -76,7 +116,12 @@ export function PresentationStudio() {
       setEditing(
         genKind === "flyer"
           ? { kind: "flyer", title: body.title, content: body.content, sourceText: body.sourceText ?? "" }
-          : { kind: "deck", title: body.title, slides: body.slides, sourceText: body.sourceText ?? "" },
+          : {
+              kind: "deck",
+              title: body.title,
+              slides: deckFromPlans(body.title, body.slides),
+              sourceText: body.sourceText ?? "",
+            },
       );
     } catch (err) {
       setGenError(err instanceof Error ? err.message : String(err));
@@ -120,6 +165,12 @@ export function PresentationStudio() {
             ← Back to templates
           </Button>
           <div className="flex items-center gap-2">
+            <input
+              value={editing.title}
+              onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+              placeholder="File name"
+              className="rounded-md border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            />
             {exportError && <p className="text-sm text-red-700 dark:text-red-400">{exportError}</p>}
             <Button variant="primary" onClick={handleExport} disabled={exporting}>
               {exporting ? "Rendering..." : "Download .pptx"}
@@ -127,23 +178,8 @@ export function PresentationStudio() {
           </div>
         </div>
 
-        <label className="text-sm">
-          <span className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
-            {editing.kind === "deck" ? "Deck" : "Flyer"} title
-          </span>
-          <input
-            value={editing.title}
-            onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-            className={inputClass}
-          />
-        </label>
-
         {editing.kind === "deck" ? (
-          <DeckEditor
-            slides={editing.slides}
-            sourceText={editing.sourceText}
-            onChange={(slides) => setEditing({ ...editing, slides })}
-          />
+          <DeckEditor slides={editing.slides} sourceText={editing.sourceText} onChange={(slides) => setEditing({ ...editing, slides })} />
         ) : (
           <FlyerEditor
             content={editing.content}
@@ -160,22 +196,28 @@ export function PresentationStudio() {
       <div>
         <h2 className="text-base font-semibold">Choose a type of presentation</h2>
         <p className="mt-1 text-sm text-foreground/60">
-          Every template opens in a free online editor - rearrange slides, rewrite text,
-          add or remove content, then export whenever you&apos;re ready. No credits used.
+          Every template opens in a free, Canva-style online editor - drag and resize
+          elements, edit text in place, add your own text/shapes/images, then export
+          whenever you&apos;re ready. No credits used.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {TEMPLATES.map((t) => (
-            <div key={t.id} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-3.5">
-              <span
-                className={`self-start rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                  t.kind === "deck" ? "bg-primary/15 text-primary" : "bg-accent/25 text-[#8a6300]"
-                }`}
-              >
-                {t.kind === "deck" ? "Deck" : "Flyer"}
-              </span>
-              <p className="text-sm font-semibold">{t.name}</p>
-              <p className="flex-1 text-xs text-foreground/60">{t.description}</p>
-              <div className="mt-1.5 flex items-center gap-3">
+            <div key={t.id} className="flex flex-col gap-2 rounded-md border border-border bg-surface p-3">
+              <TemplateThumbnail template={t} />
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-foreground/60">{t.description}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    t.kind === "deck" ? "bg-primary/15 text-primary" : "bg-accent/25 text-[#8a6300]"
+                  }`}
+                >
+                  {t.kind === "deck" ? "Deck" : "Flyer"}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-3">
                 <Button variant="primary" size="sm" onClick={() => openTemplate(t)}>
                   Edit online
                 </Button>

@@ -1,5 +1,17 @@
 import PptxGenJS from "pptxgenjs";
 import type { FlyerContent } from "./templates";
+import {
+  PRIMARY,
+  ACCENT,
+  TEXT_DARK,
+  FLYER_LAYOUT,
+  flyerHeadlineBox,
+  FLYER_SUBHEADLINE_BOX,
+  FLYER_PANEL_BOX,
+  flyerBodyBox,
+  FLYER_CTA_BOX,
+  FLYER_FOOTER_BOX,
+} from "./layout";
 
 // A flyer is a single portrait page rather than a 16:9 slide deck - its own layout/render
 // path rather than shoehorning it through renderDeck.ts's widescreen assumptions.
@@ -7,27 +19,27 @@ import type { FlyerContent } from "./templates";
 // PDF - consistent with this app's one rendering dependency, and still fully editable in
 // PowerPoint afterward, matching the spec's "native chart parts stay editable" principle
 // applied to the whole document, not just charts.
-
-const PRIMARY = "005C3D";
-const ACCENT = "F8B712";
-const TEXT_DARK = "101914";
+//
+// Every position/size/color below comes from lib/presentation/layout.ts, shared with the
+// on-screen canvas editor (components/presentation/FlyerCanvas.tsx) - see renderDeck.ts's
+// header comment for why.
 
 export async function renderFlyer(content: FlyerContent, title: string): Promise<Buffer> {
   const pres = new PptxGenJS();
-  // US Letter portrait, in inches - the flyer's actual print/export target.
-  pres.defineLayout({ name: "HOMIE_FLYER", width: 8.5, height: 11 });
+  pres.defineLayout({ name: "HOMIE_FLYER", width: FLYER_LAYOUT.widthIn, height: FLYER_LAYOUT.heightIn });
   pres.layout = "HOMIE_FLYER";
   pres.title = title;
 
   const slide = pres.addSlide();
   slide.background = { color: PRIMARY };
 
+  const headlineBox = flyerHeadlineBox(!!content.subheadline);
   slide.addText(content.headline, {
-    x: 0.6,
-    y: 0.9,
-    w: 7.3,
-    h: content.subheadline ? 1.4 : 1.8,
-    fontSize: 40,
+    x: headlineBox.xIn,
+    y: headlineBox.yIn,
+    w: headlineBox.wIn,
+    h: headlineBox.hIn,
+    fontSize: headlineBox.fontSize,
     bold: true,
     color: "FFFFFF",
     fontFace: "Arial",
@@ -37,11 +49,11 @@ export async function renderFlyer(content: FlyerContent, title: string): Promise
 
   if (content.subheadline) {
     slide.addText(content.subheadline, {
-      x: 0.6,
-      y: 2.3,
-      w: 7.3,
-      h: 0.6,
-      fontSize: 18,
+      x: FLYER_SUBHEADLINE_BOX.xIn,
+      y: FLYER_SUBHEADLINE_BOX.yIn,
+      w: FLYER_SUBHEADLINE_BOX.wIn,
+      h: FLYER_SUBHEADLINE_BOX.hIn,
+      fontSize: FLYER_SUBHEADLINE_BOX.fontSize,
       color: ACCENT,
       fontFace: "Arial",
       align: "center",
@@ -50,16 +62,23 @@ export async function renderFlyer(content: FlyerContent, title: string): Promise
   }
 
   // White content panel over the lower ~2/3 of the page, holding the body copy and CTA.
-  slide.addShape(pres.ShapeType.rect, { x: 0.5, y: 3.2, w: 7.5, h: 7.2, fill: { color: "FFFFFF" } });
+  slide.addShape(pres.ShapeType.rect, {
+    x: FLYER_PANEL_BOX.xIn,
+    y: FLYER_PANEL_BOX.yIn,
+    w: FLYER_PANEL_BOX.wIn,
+    h: FLYER_PANEL_BOX.hIn,
+    fill: { color: "FFFFFF" },
+  });
 
+  const bodyBox = flyerBodyBox(!!content.cta);
   slide.addText(
     content.body.map((line) => ({ text: line, options: { bullet: true, breakLine: true } })),
     {
-      x: 0.9,
-      y: 3.6,
-      w: 6.7,
-      h: content.cta ? 5.6 : 6.4,
-      fontSize: 16,
+      x: bodyBox.xIn,
+      y: bodyBox.yIn,
+      w: bodyBox.wIn,
+      h: bodyBox.hIn,
+      fontSize: bodyBox.fontSize,
       color: TEXT_DARK,
       fontFace: "Arial",
       valign: "top",
@@ -68,13 +87,19 @@ export async function renderFlyer(content: FlyerContent, title: string): Promise
   );
 
   if (content.cta) {
-    slide.addShape(pres.ShapeType.rect, { x: 0.9, y: 9.3, w: 6.7, h: 0.7, fill: { color: ACCENT } });
+    slide.addShape(pres.ShapeType.rect, {
+      x: FLYER_CTA_BOX.xIn,
+      y: FLYER_CTA_BOX.yIn,
+      w: FLYER_CTA_BOX.wIn,
+      h: FLYER_CTA_BOX.hIn,
+      fill: { color: ACCENT },
+    });
     slide.addText(content.cta, {
-      x: 0.9,
-      y: 9.3,
-      w: 6.7,
-      h: 0.7,
-      fontSize: 15,
+      x: FLYER_CTA_BOX.xIn,
+      y: FLYER_CTA_BOX.yIn,
+      w: FLYER_CTA_BOX.wIn,
+      h: FLYER_CTA_BOX.hIn,
+      fontSize: FLYER_CTA_BOX.fontSize,
       bold: true,
       color: "101914",
       fontFace: "Arial",
@@ -85,11 +110,11 @@ export async function renderFlyer(content: FlyerContent, title: string): Promise
 
   if (content.footer) {
     slide.addText(content.footer, {
-      x: 0.5,
-      y: 10.55,
-      w: 7.5,
-      h: 0.35,
-      fontSize: 10,
+      x: FLYER_FOOTER_BOX.xIn,
+      y: FLYER_FOOTER_BOX.yIn,
+      w: FLYER_FOOTER_BOX.wIn,
+      h: FLYER_FOOTER_BOX.hIn,
+      fontSize: FLYER_FOOTER_BOX.fontSize,
       color: TEXT_DARK,
       fontFace: "Arial",
       align: "center",
