@@ -1,11 +1,16 @@
 import type { SlidePlan } from "./outline";
+import type { Slide } from "./elements";
+import { pitchDeckModern, marketingReport, caseStudy, minimalist } from "./designedTemplates";
 
 /**
  * Real starting templates - unlike app/api/generate/route.ts's path, these never call the
- * AI gateway at all: each is a hand-authored SlidePlan[]/FlyerContent literal, rendered
- * straight through the same deterministic renderers (renderDeck.ts/renderFlyer.ts) the AI
- * path uses. That's deliberate - a template should download instantly, work with no API
- * key, and never cost credits, the same way picking a Canva template does.
+ * AI gateway at all: each is either a hand-authored SlidePlan[]/FlyerContent literal
+ * (rendered through elements.ts's slideFromPlan, always the same title+body layout) or,
+ * for the bespoke-designed decks below, a `build` function returning a fully custom
+ * Slide[] straight from lib/presentation/designedTemplates.ts. Both paths render through
+ * the same deterministic renderDeck.ts/renderFlyer.ts the AI path uses. That's deliberate
+ * - a template should download instantly, work with no API key, and never cost credits,
+ * the same way picking a Canva template does.
  */
 
 export interface FlyerContent {
@@ -18,6 +23,7 @@ export interface FlyerContent {
 
 export type Template =
   | { id: string; kind: "deck"; name: string; description: string; slides: SlidePlan[] }
+  | { id: string; kind: "deck"; name: string; description: string; build: (primary: string, accent: string) => Slide[] }
   | { id: string; kind: "flyer"; name: string; description: string; content: FlyerContent };
 
 export const TEMPLATES: Template[] = [
@@ -43,6 +49,34 @@ export const TEMPLATES: Template[] = [
       { title: "Team", bullets: ["Founder backgrounds", "Relevant experience", "Why this team wins"] },
       { title: "The Ask", bullets: ["How much you're raising", "What it funds", "Milestones it unlocks"] },
     ],
+  },
+  {
+    id: "pitch-deck-modern",
+    kind: "deck",
+    name: "Pitch Deck (Modern)",
+    description: "Bold typography, bento-grid stats, one big number per slide - 2026's investor-deck look.",
+    build: pitchDeckModern,
+  },
+  {
+    id: "marketing-report",
+    kind: "deck",
+    name: "Marketing Report",
+    description: "KPI bento grid, a real chart, and a pull-quote slide.",
+    build: marketingReport,
+  },
+  {
+    id: "case-study",
+    kind: "deck",
+    name: "Case Study",
+    description: "Photo-placeholder cover, challenge/solution split, results, gallery.",
+    build: caseStudy,
+  },
+  {
+    id: "minimalist",
+    kind: "deck",
+    name: "Minimalist",
+    description: "Huge quiet typography, no decoration at all - type as the whole design.",
+    build: (primary) => minimalist(primary),
   },
   {
     id: "project-status",
