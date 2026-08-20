@@ -17,9 +17,8 @@ function startNextServer(): void {
   // Dev mode runs the app's own dev server, the only path actually exercised so far. A
   // packaged build would run "start" against a pre-built .next instead - that branch is
   // here so this file is ready for an electron-builder pass later (bundling the built
-  // homie-presentation/ tree as an extraResource, same pattern as
-  // xcrop/desktop/electron/main.ts's orchestrator), but no installer config exists yet,
-  // so app.isPackaged is always false in practice today.
+  // homie-presentation/ tree as an extraResource), but no installer config exists yet, so
+  // app.isPackaged is always false in practice today.
   const script = app.isPackaged ? "start" : "dev";
   // Not node_modules/.bin/next(.cmd) - spawn() can't exec a .cmd shim directly on Windows
   // without shell:true (fails with EINVAL), and shell:true opens its own quoting/escaping
@@ -44,8 +43,7 @@ async function waitForServer(timeoutMs = 30000): Promise<void> {
       const res = await fetch(`http://127.0.0.1:${APP_PORT}`);
       if (res.ok) return;
     } catch {
-      // Not up yet - keep polling until timeout, matching xcrop/desktop/electron/main.ts's
-      // waitForOrchestrator.
+      // Not up yet - keep polling until timeout.
     }
     await new Promise((resolve) => setTimeout(resolve, 300));
   }

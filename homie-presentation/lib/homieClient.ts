@@ -1,5 +1,5 @@
-// Mirrors xcrop/orchestrator/app/homie_client.py and src/xGIS.AddIn/Agent/ClaudeAgentService.cs's
-// reason for existing: backend/app/routes/chat.py's gateway holds the only real Anthropic
+// Mirrors src/xGIS.AddIn/Agent/ClaudeAgentService.cs's reason for existing:
+// backend/app/routes/chat.py's gateway holds the only real Anthropic
 // key and meters usage against the signed-in account's credit balance - this app must
 // never call Anthropic directly, or AI usage here would be unbilled and unaudited against
 // the same account the rest of the Homie platform tracks. The API key itself is supplied
@@ -28,7 +28,7 @@ interface ChatResponse {
   remaining_credits: number;
 }
 
-/** Calls the same /v1/chat gateway xcrop and Homie GIS use - request/response shape
+/** Calls the same /v1/chat gateway Homie GIS uses - request/response shape
  * mirrors Anthropic's Messages API (see backend/app/routes/chat.py). Returns the
  * concatenated text of every text content block, since this app only ever asks for a
  * single structured-JSON text reply, never tool use. */

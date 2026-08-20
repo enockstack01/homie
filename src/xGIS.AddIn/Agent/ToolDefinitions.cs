@@ -135,15 +135,6 @@ public static class ToolDefinitions
         BuildTool("run_geoprocessing_tool",
             "Run any ArcGIS geoprocessing tool by name for requests not covered by a more specific tool above. tool_name_with_alias must include the toolbox alias (e.g. 'CopyFeatures_management', 'Buffer_analysis'). parameters must be positional strings in the exact order of that tool's arcpy signature; trailing optional parameters may be omitted.",
             """{"type":"object","properties":{"tool_name_with_alias":{"type":"string"},"parameters":{"type":"array","items":{"type":"string"}}},"required":["tool_name_with_alias","parameters"]}"""),
-
-        // --- Crop suitability (xcrop) ---
-        BuildTool("list_crop_profiles",
-            "List the available crop suitability profiles (id and display name) from xcrop - call this before run_crop_suitability_analysis if you don't already know a valid crop_id.",
-            """{"type":"object","properties":{}}"""),
-
-        BuildTool("run_crop_suitability_analysis",
-            "Run an xcrop crop suitability analysis over the active map's current visible extent - ask the user to pan/zoom to their area of interest first if it isn't already in view. Scores a grid of points against the named crop's rainfall/temperature/elevation tolerances and a slope limit, classifies each FAO-style S1 (highly suitable) through N (not suitable), and adds the result as a new colored layer to the active map. Requires a configured Homie account API key (same one xGIS chat itself uses).",
-            """{"type":"object","properties":{"crop_id":{"type":"string","description":"A crop id from list_crop_profiles, e.g. 'avocado'."}},"required":["crop_id"]}"""),
     };
 
     private static JsonElement BuildTool(string name, string description, string schemaJson)

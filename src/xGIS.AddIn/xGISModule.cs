@@ -2,7 +2,6 @@ using ArcGIS.Desktop.Framework;
 using ArcGIS.Desktop.Framework.Contracts;
 using xGIS.AddIn.Config;
 using xGIS.AddIn.Logging;
-using xGIS.AddIn.Orchestrator;
 
 namespace xGIS.AddIn;
 
@@ -15,7 +14,6 @@ internal sealed class xGISModule : Module
 
     private SettingsViewModel? _settings;
     private AuditLogger? _auditLogger;
-    private OrchestratorProcess? _orchestratorProcess;
 
     /// <summary>
     /// One instance for the whole add-in lifetime so the Settings window and the chat
@@ -29,19 +27,5 @@ internal sealed class xGISModule : Module
 
     public AuditLogger AuditLogger => _auditLogger ??= new AuditLogger();
 
-    /// <summary>
-    /// The xcrop-orchestrator.exe subprocess CropSuitabilityTools calls into - lazy so a
-    /// user who never touches a crop-suitability tool never pays for spawning it, and
-    /// owned here (not by CropSuitabilityTools itself) so Uninitialize below can actually
-    /// kill it rather than leaking an orphaned process past ArcGIS Pro's own lifetime.
-    /// </summary>
-    public OrchestratorProcess Orchestrator => _orchestratorProcess ??= new OrchestratorProcess();
-
     protected override bool CanUnload() => true;
-
-    protected override void Uninitialize()
-    {
-        _orchestratorProcess?.Dispose();
-        base.Uninitialize();
-    }
 }

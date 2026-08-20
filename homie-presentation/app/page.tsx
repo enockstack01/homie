@@ -16,7 +16,7 @@ export default function HomePage() {
 
   // The API key never touches this app's server except as a per-request forwarded header
   // (see app/api/generate/route.ts) - persisting it here, client-side only, is the same
-  // trust boundary xcrop's SettingsPanel and Homie GIS's Settings tab already use.
+  // trust boundary Homie GIS's Settings tab already uses.
   useEffect(() => {
     const stored = window.localStorage.getItem(API_KEY_STORAGE_KEY);
     if (stored) setApiKey(stored);
@@ -116,8 +116,8 @@ export default function HomePage() {
             onChange={(e) => setApiKey(e.target.value)}
           />
           <p className="hint">
-            The same key used by Homie GIS and xcrop - issue one from your Homie
-            dashboard&apos;s Applications page.
+            The same key used by Homie GIS - issue one from your Homie dashboard&apos;s
+            Applications page.
           </p>
         </div>
 

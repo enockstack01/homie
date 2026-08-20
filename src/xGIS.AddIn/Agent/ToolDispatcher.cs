@@ -50,9 +50,6 @@ public static class ToolDispatcher
         ["sort_features"] = GeoprocessingTools.SortFeatures,
         ["frequency"] = GeoprocessingTools.Frequency,
         ["run_geoprocessing_tool"] = GeoprocessingTools.RunGeoprocessingTool,
-
-        ["list_crop_profiles"] = CropSuitabilityTools.ListCropProfiles,
-        ["run_crop_suitability_analysis"] = CropSuitabilityTools.RunSuitabilityAnalysis,
     };
 
     /// <summary>Every tool name this dispatcher can route - should exactly match
