@@ -98,6 +98,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
   const [exportBusy, setExportBusy] = useState<"png" | "pdf" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const replaceImageInputRef = useRef<HTMLInputElement>(null);
   // Hidden off-screen renders of every slide (see the JSX near the bottom), used only to
   // rasterize a real, chrome-free (no selection outlines/resize handles) capture for the
   // PNG/PDF export buttons - the on-screen canvas isn't captured directly since it's the
@@ -253,6 +254,17 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
       img.onload = () => addElement(newImage(dataUrl, img.naturalWidth, img.naturalHeight));
       img.src = dataUrl;
     };
+    reader.readAsDataURL(file);
+  }
+
+  /** Swaps a photo in place - same id, same position/size on the slide, only the pixels
+   * change (PowerPoint's own "Change Picture" does the same thing) - this plus the
+   * template sample photos (lib/presentation/assets.ts) is what makes "download and send
+   * it, just replacing photos or text" true for a whole deck, not only newly-inserted
+   * images. */
+  function handleReplaceImage(id: string, file: File) {
+    const reader = new FileReader();
+    reader.onload = () => updateElement(id, { dataUrl: reader.result as string });
     reader.readAsDataURL(file);
   }
 
@@ -762,6 +774,20 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
 
                 {imageEl && (
                   <>
+                    <Button variant="secondary" size="sm" onClick={() => replaceImageInputRef.current?.click()}>
+                      Replace photo
+                    </Button>
+                    <input
+                      ref={replaceImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleReplaceImage(imageEl.id, file);
+                        e.target.value = "";
+                      }}
+                    />
                     <label className="flex items-center gap-1.5 text-xs text-foreground/60">
                       Alt text
                       <input

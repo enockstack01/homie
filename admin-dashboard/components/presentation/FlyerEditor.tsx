@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { FlyerContent } from "@/lib/presentation/templates";
 import { AiRewriteControl } from "./AiRewriteControl";
 import { FlyerCanvas } from "./FlyerCanvas";
@@ -10,11 +11,15 @@ interface Props {
   sourceText: string;
 }
 
-/** Canva-style single-page editor for the "flyer" template format - no thumbnail rail
- * (there's only one page), every field edited directly on FlyerCanvas, plus one
- * AI-rewrite control for the whole page since a flyer is one unit rather than a
- * sequence like a deck's slides. */
+/** Canva-style single-page editor for the "flyer" format - no thumbnail rail (there's
+ * only one page), every field edited directly on FlyerCanvas, plus one AI-rewrite
+ * control for the whole page since a flyer is one unit rather than a sequence like a
+ * deck's slides. Owns the hero-photo upload (FlyerCanvas just renders whatever
+ * content.imageUrl is and asks to pick/remove one) the same way DeckEditor.tsx owns
+ * image uploads for deck elements. */
 export function FlyerEditor({ content, onChange, sourceText }: Props) {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   async function aiRewrite(instruction: string) {
     const response = await fetch("/api/presentation/ai-edit", {
       method: "POST",
@@ -24,6 +29,12 @@ export function FlyerEditor({ content, onChange, sourceText }: Props) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.detail || `Request failed: ${response.status}`);
     onChange(body.content as FlyerContent);
+  }
+
+  function handleImagePick(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => onChange({ ...content, imageUrl: reader.result as string });
+    reader.readAsDataURL(file);
   }
 
   return (
@@ -39,6 +50,7 @@ export function FlyerEditor({ content, onChange, sourceText }: Props) {
             body={content.body}
             cta={content.cta}
             footer={content.footer}
+            imageUrl={content.imageUrl}
             editable
             onHeadlineChange={(headline) => onChange({ ...content, headline })}
             onSubheadlineChange={(subheadline) => onChange({ ...content, subheadline })}
@@ -47,9 +59,22 @@ export function FlyerEditor({ content, onChange, sourceText }: Props) {
             onBodyRemove={(i) => onChange({ ...content, body: content.body.filter((_, j) => j !== i) })}
             onCtaChange={(cta) => onChange({ ...content, cta })}
             onFooterChange={(footer) => onChange({ ...content, footer })}
+            onImageChange={(imageUrl) => onChange({ ...content, imageUrl })}
+            onImagePick={() => imageInputRef.current?.click()}
           />
         </div>
       </div>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImagePick(file);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }

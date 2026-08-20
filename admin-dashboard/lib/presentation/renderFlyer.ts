@@ -12,6 +12,7 @@ import {
   FLYER_CTA_BOX,
   FLYER_FOOTER_BOX,
 } from "./layout";
+import { resolveImageData } from "./assetResolve";
 
 // A flyer is a single portrait page rather than a 16:9 slide deck - its own layout/render
 // path rather than shoehorning it through renderDeck.ts's widescreen assumptions.
@@ -32,6 +33,29 @@ export async function renderFlyer(content: FlyerContent, title: string): Promise
 
   const slide = pres.addSlide();
   slide.background = { color: PRIMARY };
+
+  // Real hero photo (a curated CC0 sample, or the user's own upload - see
+  // lib/presentation/assets.ts and FlyerEditor.tsx) fills the same top zone the flat
+  // PRIMARY color used to, with a translucent tint over it so the headline/subheadline
+  // text - unchanged below - stays legible either way.
+  if (content.imageUrl) {
+    slide.addImage({
+      data: await resolveImageData(content.imageUrl),
+      x: 0,
+      y: 0,
+      w: FLYER_LAYOUT.widthIn,
+      h: FLYER_PANEL_BOX.yIn,
+      sizing: { type: "cover", w: FLYER_LAYOUT.widthIn, h: FLYER_PANEL_BOX.yIn },
+    });
+    slide.addShape(pres.ShapeType.rect, {
+      x: 0,
+      y: 0,
+      w: FLYER_LAYOUT.widthIn,
+      h: FLYER_PANEL_BOX.yIn,
+      fill: { color: PRIMARY, transparency: 40 },
+      line: { type: "none" },
+    });
+  }
 
   const headlineBox = flyerHeadlineBox(!!content.subheadline);
   slide.addText(content.headline, {

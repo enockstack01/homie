@@ -1,6 +1,7 @@
 import type { SlidePlan } from "./outline";
 import type { Slide } from "./elements";
 import { pitchDeckModern, marketingReport, caseStudy, minimalist } from "./designedTemplates";
+import { SAMPLE_IMAGES } from "./assets";
 
 /**
  * Real starting templates - unlike app/api/generate/route.ts's path, these never call the
@@ -19,6 +20,10 @@ export interface FlyerContent {
   body: string[];
   cta?: string;
   footer?: string;
+  /** A "/presentation-assets/..." path (lib/presentation/assets.ts) or a user-uploaded
+   * data: URI - fills the flyer's top zone as a real photo instead of flat color, see
+   * renderFlyer.ts/FlyerCanvas.tsx. Optional - existing text-only flyers are unaffected. */
+  imageUrl?: string;
 }
 
 export type Template =
@@ -171,6 +176,34 @@ export const TEMPLATES: Template[] = [
       body: ["[What the offer includes]", "[Any terms or conditions]", "[Why it matters to the customer]"],
       cta: "[Call to action, e.g. Shop now at ...]",
       footer: "[Business name / contact info]",
+    },
+  },
+  {
+    id: "real-estate-flyer",
+    kind: "flyer",
+    name: "Real Estate Listing",
+    description: "A real listing photo, price callout, features, and contact.",
+    content: {
+      headline: "[123 Example Street]",
+      subheadline: "$[Price]  ·  [City, State]",
+      body: ["[4] beds  ·  [3] baths  ·  [2,400] sq ft", "[Key feature - updated kitchen, big yard, etc.]", "[Second key feature]"],
+      cta: "Schedule a showing: [phone / email]",
+      footer: "[Agent name]  ·  [Brokerage]  ·  [License #]",
+      imageUrl: SAMPLE_IMAGES.realEstateHouse,
+    },
+  },
+  {
+    id: "restaurant-flyer",
+    kind: "flyer",
+    name: "Restaurant Special",
+    description: "A plated-dish photo, offer headline, and details.",
+    content: {
+      headline: "[Weekend Tasting Menu]",
+      subheadline: "[Restaurant Name]",
+      body: ["[Course one - short description]", "[Course two - short description]", "[Price per person]"],
+      cta: "Reserve at [phone / website]",
+      footer: "[Address]  ·  [Hours]",
+      imageUrl: SAMPLE_IMAGES.restaurantPlating,
     },
   },
   {

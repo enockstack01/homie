@@ -51,6 +51,7 @@ function TemplateThumbnail({ template, primary, accent }: { template: Template; 
         body={template.content.body}
         cta={template.content.cta}
         footer={template.content.footer}
+        imageUrl={template.content.imageUrl}
         editable={false}
       />
     </ScaledPreview>

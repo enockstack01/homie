@@ -1,6 +1,7 @@
 import PptxGenJS from "pptxgenjs";
 import { SHAPE_KINDS, type Slide } from "./elements";
 import { DECK_LAYOUT } from "./layout";
+import { resolveImageData } from "./assetResolve";
 
 const PPTX_SHAPE_TYPE: Record<string, string> = Object.fromEntries(SHAPE_KINDS.map((k) => [k.id, k.pptx]));
 
@@ -121,7 +122,18 @@ export async function renderDeck(slides: Slide[], title: string): Promise<Buffer
           ...(el.chartKind === "pie" ? {} : { chartColors: [el.color] }),
         });
       } else {
-        s.addImage({ data: el.dataUrl, x: el.xIn, y: el.yIn, w: el.wIn, h: el.hIn, altText: el.alt });
+        // sizing:"cover" matches SlideCanvas.tsx's object-fit:cover on the <img> preview -
+        // without it PptxGenJS stretches the source image to exactly fill w x h, distorting
+        // its aspect ratio whenever the frame's proportions don't match the photo's.
+        s.addImage({
+          data: await resolveImageData(el.dataUrl),
+          x: el.xIn,
+          y: el.yIn,
+          w: el.wIn,
+          h: el.hIn,
+          altText: el.alt,
+          sizing: { type: "cover", w: el.wIn, h: el.hIn },
+        });
       }
     }
   }

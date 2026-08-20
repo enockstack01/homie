@@ -1,4 +1,6 @@
-import { newId, type Slide, type SlideElement, type TextElement, type ShapeElement } from "./elements";
+import { newId, type Slide, type SlideElement, type TextElement, type ShapeElement, type ImageElement } from "./elements";
+import { DECK_LAYOUT } from "./layout";
+import { SAMPLE_IMAGES } from "./assets";
 
 // Bespoke, hand-laid-out templates - unlike lib/presentation/templates.ts's other deck
 // templates (a plain {title, bullets} SlidePlan[] run through elements.ts's
@@ -23,6 +25,18 @@ function box(partial: Omit<ShapeElement, "id" | "type">): ShapeElement {
 function slide(background: string, elements: SlideElement[]): Slide {
   return { id: newId(), background, elements };
 }
+function photo(partial: Omit<ImageElement, "id" | "type">): ImageElement {
+  return { id: newId(), type: "image", ...partial };
+}
+/** Full-bleed cover photo + a translucent color tint over it, so a bold white/light title
+ * on top stays legible regardless of what's in the photo - the same pattern
+ * renderFlyer.ts/FlyerCanvas.tsx use for a flyer's hero image. */
+function coverPhoto(dataUrl: string, tint: string, alt: string): [ImageElement, ShapeElement] {
+  return [
+    photo({ dataUrl, alt, xIn: 0, yIn: 0, wIn: DECK_LAYOUT.widthIn, hIn: DECK_LAYOUT.heightIn }),
+    box({ shape: "rect", fill: tint, opacity: 55, xIn: 0, yIn: 0, wIn: DECK_LAYOUT.widthIn, hIn: DECK_LAYOUT.heightIn }),
+  ];
+}
 
 /** "Pitch Deck (Modern)" - the essential investor-pitch slide set (Problem, Solution,
  * Market/Traction, Team, Ask) research turned up as the standard structure, laid out with
@@ -30,8 +44,8 @@ function slide(background: string, elements: SlideElement[]): Slide {
  * classic bullet list "Business Pitch" template already covers. */
 export function pitchDeckModern(primary: string, accent: string): Slide[] {
   const cover = slide(primary, [
+    ...coverPhoto(SAMPLE_IMAGES.officeBoardroom, primary, "Modern boardroom - replace with your own photo"),
     box({ shape: "roundRect", fill: accent, opacity: 18, xIn: 6.6, yIn: -1.4, wIn: 4.6, hIn: 4.6, rotate: 12 }),
-    box({ shape: "ellipse", fill: "FFFFFF", opacity: 10, xIn: -1.2, yIn: 3.6, wIn: 3.2, hIn: 3.2 }),
     text({ role: "title", text: "Your Company", xIn: 0.7, yIn: 1.85, wIn: 8.4, hIn: 1.5, fontSize: 54, bold: true, color: "FFFFFF" }),
     text({ text: "One bold line about what you do and who it's for", xIn: 0.7, yIn: 3.3, wIn: 7.8, hIn: 0.55, fontSize: 16, color: accent }),
     text({ text: "[Founder name]  ·  [Month Year]", xIn: 0.7, yIn: 4.85, wIn: 6, hIn: 0.4, fontSize: 12, color: "FFFFFF" }),
@@ -140,6 +154,7 @@ export function pitchDeckModern(primary: string, accent: string): Slide[] {
  * find (2026's "narrate the data" convention), and a pull-quote/testimonial slide. */
 export function marketingReport(primary: string, accent: string): Slide[] {
   const cover = slide(primary, [
+    ...coverPhoto(SAMPLE_IMAGES.citySkyline, primary, "City skyline - replace with your own photo"),
     box({ shape: "roundRect", fill: accent, opacity: 18, xIn: -1.5, yIn: -1.2, wIn: 4.2, hIn: 4.2, rotate: -10 }),
     text({ role: "title", text: "Marketing Report", xIn: 0.7, yIn: 2.0, wIn: 8.4, hIn: 1.3, fontSize: 46, bold: true, color: "FFFFFF" }),
     text({ text: "[Reporting period]  ·  Prepared by [Your team]", xIn: 0.7, yIn: 3.25, wIn: 7.8, hIn: 0.5, fontSize: 15, color: accent }),
@@ -211,14 +226,15 @@ export function marketingReport(primary: string, accent: string): Slide[] {
   return [cover, kpis, chartSlide, quote];
 }
 
-/** "Case Study" - a portfolio/agency-style deck built around image-placeholder space
- * (this app has no stock-photo library to fill it with real photography, so these are
- * honestly labeled placeholder zones the user drops their own image into - see
- * DeckEditor.tsx's Insert > Image) rather than pretending text boxes are photos. */
+/** "Case Study" - a portfolio/agency-style deck built around real photo space: a curated
+ * CC0 sample (lib/presentation/assets.ts - see public/presentation-assets/SOURCES.md for
+ * licensing) fills every image zone so the template downloads as a finished-looking
+ * sample, exactly like Canva's own template previews do; every photo is a real
+ * ImageElement the user selects and replaces (DeckEditor.tsx's Format tab has a
+ * "Replace photo" action) rather than a fake placeholder box. */
 export function caseStudy(primary: string, accent: string): Slide[] {
   const cover = slide("FFFFFF", [
-    box({ shape: "rect", fill: CARD_FILL, xIn: 0, yIn: 0, wIn: 5, hIn: 5.63 }),
-    text({ text: "[Drop a project photo here]", xIn: 0.5, yIn: 2.6, wIn: 4, hIn: 0.5, fontSize: 12, align: "center", color: "9AA5A0" }),
+    photo({ dataUrl: SAMPLE_IMAGES.workspaceLaptop, alt: "Project workspace - replace with your own photo", xIn: 0, yIn: 0, wIn: 5, hIn: 5.63 }),
     box({ shape: "rect", fill: primary, xIn: 5, yIn: 0, wIn: 0.06, hIn: 5.63 }),
     text({ text: "CASE STUDY", xIn: 5.5, yIn: 1.5, wIn: 4, hIn: 0.35, fontSize: 12, bold: true, color: accent }),
     text({ role: "title", text: "[Client / Project Name]", xIn: 5.5, yIn: 1.9, wIn: 4.0, hIn: 1.7, fontSize: 32, bold: true, color: primary }),
@@ -265,10 +281,9 @@ export function caseStudy(primary: string, accent: string): Slide[] {
 
   const gallery = slide("FFFFFF", [
     text({ text: "SELECTED WORK", xIn: 0.6, yIn: 0.5, wIn: 5, hIn: 0.35, fontSize: 12, bold: true, color: primary }),
-    box({ shape: "rect", fill: CARD_FILL, xIn: 0.6, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
-    box({ shape: "rect", fill: CARD_FILL, xIn: 3.633, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
-    box({ shape: "rect", fill: CARD_FILL, xIn: 6.667, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
-    text({ text: "[Drop project images into each frame]", xIn: 0.6, yIn: 5.15, wIn: 8.8, hIn: 0.35, fontSize: 10, align: "center", color: "9AA5A0" }),
+    photo({ dataUrl: SAMPLE_IMAGES.officeBoardroom, alt: "Project photo one - replace with your own", xIn: 0.6, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
+    photo({ dataUrl: SAMPLE_IMAGES.workspaceLaptop, alt: "Project photo two - replace with your own", xIn: 3.633, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
+    photo({ dataUrl: SAMPLE_IMAGES.citySkyline, alt: "Project photo three - replace with your own", xIn: 6.667, yIn: 1.15, wIn: 2.733, hIn: 3.85 }),
   ]);
 
   return [cover, challengeSolution, results, gallery];

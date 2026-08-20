@@ -26,6 +26,7 @@ interface Props {
   body: string[];
   cta?: string;
   footer?: string;
+  imageUrl?: string;
   editable: boolean;
   onHeadlineChange?: (value: string) => void;
   onSubheadlineChange?: (value: string | undefined) => void;
@@ -34,6 +35,8 @@ interface Props {
   onBodyRemove?: (index: number) => void;
   onCtaChange?: (value: string | undefined) => void;
   onFooterChange?: (value: string | undefined) => void;
+  onImageChange?: (dataUrl: string | undefined) => void;
+  onImagePick?: () => void;
 }
 
 /** Renders the flyer "page" at its true pixel size - see DeckCanvas.tsx's header comment
@@ -48,6 +51,7 @@ export function FlyerCanvas({
   body,
   cta,
   footer,
+  imageUrl,
   editable,
   onHeadlineChange,
   onSubheadlineChange,
@@ -56,15 +60,61 @@ export function FlyerCanvas({
   onBodyRemove,
   onCtaChange,
   onFooterChange,
+  onImageChange,
+  onImagePick,
 }: Props) {
   const headlineBox = flyerHeadlineBox(subheadline !== undefined);
   const bodyBox = flyerBodyBox(cta !== undefined);
+  const photoZoneHeightPx = FLYER_PANEL_BOX.yIn * PX_PER_INCH;
 
   return (
     <div
       className="relative"
       style={{ width: FLYER_CANVAS_WIDTH, height: FLYER_CANVAS_HEIGHT, backgroundColor: `#${PRIMARY}` }}
     >
+      {imageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt=""
+            style={{ position: "absolute", left: 0, top: 0, width: FLYER_CANVAS_WIDTH, height: photoZoneHeightPx, objectFit: "cover" }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: FLYER_CANVAS_WIDTH,
+              height: photoZoneHeightPx,
+              backgroundColor: `#${PRIMARY}`,
+              opacity: 0.4,
+            }}
+          />
+        </>
+      )}
+
+      {editable && (
+        <div className="absolute right-2 top-2 z-10 flex gap-1.5">
+          <button
+            type="button"
+            onClick={onImagePick}
+            className="rounded bg-black/40 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/60"
+          >
+            {imageUrl ? "Change photo" : "+ Add photo"}
+          </button>
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={() => onImageChange?.(undefined)}
+              className="rounded bg-black/40 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/60"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={{ ...boxToPx(headlineBox), display: "flex", alignItems: "flex-end" }}>
         <textarea
           value={headline}
