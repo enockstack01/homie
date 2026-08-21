@@ -1,5 +1,5 @@
 import { findTemplate } from "@/lib/presentation/templates";
-import { deckFromPlans } from "@/lib/presentation/elements";
+import { deckFromPlans, TEMPLATE_STYLES } from "@/lib/presentation/elements";
 import { PRIMARY, ACCENT } from "@/lib/presentation/layout";
 import { renderDeck } from "@/lib/presentation/renderDeck";
 import { renderFlyer } from "@/lib/presentation/renderFlyer";
@@ -19,7 +19,9 @@ export async function GET(request: Request): Promise<Response> {
   const buffer =
     template.kind === "deck"
       ? await renderDeck(
-          "build" in template ? template.build(PRIMARY, ACCENT) : deckFromPlans(template.name, template.slides),
+          "build" in template
+            ? template.build(PRIMARY, ACCENT)
+            : deckFromPlans(template.name, template.slides, PRIMARY, ACCENT, TEMPLATE_STYLES[template.id], template.coverImage),
           template.name,
         )
       : await renderFlyer(template.content, template.name);

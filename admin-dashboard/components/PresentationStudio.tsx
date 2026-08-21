@@ -36,7 +36,10 @@ function TemplateThumbnail({ template, primary, accent }: { template: Template; 
     // Bespoke-designed templates (lib/presentation/designedTemplates.ts) preview their
     // own real cover slide; the plain SlidePlan[] templates preview the generic
     // titleSlide/cover-style composition they'll actually open with.
-    const cover = "build" in template ? template.build(primary, accent)[0] : titleSlide(template.name, primary, accent, TEMPLATE_STYLES[template.id]);
+    const cover =
+      "build" in template
+        ? template.build(primary, accent)[0]
+        : titleSlide(template.name, primary, accent, TEMPLATE_STYLES[template.id], template.coverImage);
     return (
       <ScaledPreview width={DECK_CANVAS_WIDTH} height={DECK_CANVAS_HEIGHT}>
         <SlideCanvas slide={cover} editable={false} />
@@ -100,7 +103,10 @@ export function PresentationStudio() {
         ? {
             kind: "deck",
             title: t.name,
-            slides: "build" in t ? t.build(theme.primary, theme.accent) : deckFromPlans(t.name, t.slides, theme.primary, theme.accent, TEMPLATE_STYLES[t.id]),
+            slides:
+              "build" in t
+                ? t.build(theme.primary, theme.accent)
+                : deckFromPlans(t.name, t.slides, theme.primary, theme.accent, TEMPLATE_STYLES[t.id], t.coverImage),
             sourceText: "",
           }
         : { kind: "flyer", title: t.name, content: t.content, sourceText: "" },

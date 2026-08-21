@@ -13,6 +13,15 @@ None of these are AI-generated or watermarked stock; each was visually checked b
 | `real-estate-house.jpg` | Two-story suburban house with "for sale" sign | rawpixel.com (cc0) |
 | `restaurant-plating.jpg` | Restaurant kitchen, plating a dish | stocksnap.io (cc0) |
 | `workspace-laptop.jpg` | Laptop + coffee on a desk | stocksnap.io (cc0) |
+| `classroom-chalkboard.jpg` | Empty classroom chalkboard, no people | Flickr (cc0) |
+| `event-crowd.jpg` | Concert/event crowd, silhouetted from behind - no identifiable individuals | stocksnap.io (cc0) |
+
+Two candidates found via the same searches were rejected after visual review despite
+matching license/keywords: a posed group photo of real, identifiable people at an
+unrelated conference (inappropriate to repurpose as a generic "your team" placeholder,
+license aside) and a LEGO-minifigure joke photo with a "30% OFF" clip-art tag (wrong tone
+and not real photography). Not every template got a new photo for the same reason - a
+forced mismatch is worse than no photo.
 
 Used in `lib/presentation/designedTemplates.ts` (imported via `lib/presentation/assets.ts`,
 resolved to real embedded image bytes at export time by `lib/presentation/renderDeck.ts`

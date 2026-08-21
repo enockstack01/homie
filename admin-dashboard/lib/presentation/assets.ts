@@ -12,4 +12,6 @@ export const SAMPLE_IMAGES = {
   realEstateHouse: "/presentation-assets/real-estate-house.jpg",
   restaurantPlating: "/presentation-assets/restaurant-plating.jpg",
   workspaceLaptop: "/presentation-assets/workspace-laptop.jpg",
+  classroomChalkboard: "/presentation-assets/classroom-chalkboard.jpg",
+  eventCrowd: "/presentation-assets/event-crowd.jpg",
 } as const;

@@ -27,7 +27,7 @@ export interface FlyerContent {
 }
 
 export type Template =
-  | { id: string; kind: "deck"; name: string; description: string; slides: SlidePlan[] }
+  | { id: string; kind: "deck"; name: string; description: string; slides: SlidePlan[]; coverImage?: string }
   | { id: string; kind: "deck"; name: string; description: string; build: (primary: string, accent: string) => Slide[] }
   | { id: string; kind: "flyer"; name: string; description: string; content: FlyerContent };
 
@@ -54,6 +54,7 @@ export const TEMPLATES: Template[] = [
       { title: "Team", bullets: ["Founder backgrounds", "Relevant experience", "Why this team wins"] },
       { title: "The Ask", bullets: ["How much you're raising", "What it funds", "Milestones it unlocks"] },
     ],
+    coverImage: SAMPLE_IMAGES.officeBoardroom,
   },
   {
     id: "pitch-deck-modern",
@@ -104,6 +105,7 @@ export const TEMPLATES: Template[] = [
       },
       { title: "Next Steps", bullets: ["Priority for next period", "Owner and target date", "Support needed"] },
     ],
+    coverImage: SAMPLE_IMAGES.citySkyline,
   },
   {
     id: "team-update",
@@ -117,6 +119,7 @@ export const TEMPLATES: Template[] = [
       { title: "Blockers", bullets: ["What's slowing us down", "What we need to unblock it"] },
       { title: "Thank You", bullets: ["Shoutouts", "Questions?"] },
     ],
+    coverImage: SAMPLE_IMAGES.workspaceLaptop,
   },
   {
     id: "product-launch",
@@ -130,6 +133,7 @@ export const TEMPLATES: Template[] = [
       { title: "Key Features", bullets: ["Feature 1", "Feature 2", "Feature 3"] },
       { title: "What's Next", bullets: ["Roadmap highlights", "How to get access"] },
     ],
+    coverImage: SAMPLE_IMAGES.citySkyline,
   },
   {
     id: "lesson-plan",
@@ -144,6 +148,7 @@ export const TEMPLATES: Template[] = [
       { title: "Recap", bullets: ["Summary of what we covered", "How it connects to next time"] },
       { title: "Questions?", bullets: ["Let's discuss"] },
     ],
+    coverImage: SAMPLE_IMAGES.classroomChalkboard,
   },
   {
     id: "blank-deck",
@@ -163,6 +168,7 @@ export const TEMPLATES: Template[] = [
       body: ["[Date] at [Time]", "[Venue / Location]", "[Short description of what to expect]"],
       cta: "RSVP at [link or contact]",
       footer: "[Organizer name]",
+      imageUrl: SAMPLE_IMAGES.eventCrowd,
     },
   },
   {

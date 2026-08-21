@@ -263,12 +263,38 @@ export const TEMPLATE_STYLES: Record<string, CoverStyle> = {
 
 /** The auto-generated first page of a new deck - same visual as the old fixed "title
  * slide" (renderDeck.ts's original hardcoded first addSlide call), now just an ordinary
- * Slide made of a decorative shape composition plus two text elements. */
-export function titleSlide(title: string, primary: string = PRIMARY, accent: string = ACCENT, style: CoverStyle = "circles"): Slide {
+ * Slide made of a decorative shape composition plus two text elements. `coverImage`
+ * (a lib/presentation/assets.ts path, or any image element's dataUrl) is optional - when
+ * given, it fills the whole slide behind everything else with a tinted photo, the same
+ * pattern lib/presentation/designedTemplates.ts's own cover slides use, so a template
+ * downloads looking like a finished sample instead of a flat-color placeholder. */
+export function titleSlide(
+  title: string,
+  primary: string = PRIMARY,
+  accent: string = ACCENT,
+  style: CoverStyle = "circles",
+  coverImage?: string,
+): Slide {
   return {
     id: newId(),
     background: primary,
     elements: [
+      ...(coverImage
+        ? [
+            { id: newId(), type: "image" as const, dataUrl: coverImage, xIn: 0, yIn: 0, wIn: DECK_LAYOUT.widthIn, hIn: DECK_LAYOUT.heightIn },
+            {
+              id: newId(),
+              type: "shape" as const,
+              shape: "rect" as const,
+              fill: primary,
+              opacity: 55,
+              xIn: 0,
+              yIn: 0,
+              wIn: DECK_LAYOUT.widthIn,
+              hIn: DECK_LAYOUT.heightIn,
+            },
+          ]
+        : []),
       ...coverAccents(style, primary, accent),
       {
         id: newId(),
@@ -356,8 +382,9 @@ export function deckFromPlans(
   primary: string = PRIMARY,
   accent: string = ACCENT,
   style: CoverStyle = "circles",
+  coverImage?: string,
 ): Slide[] {
-  return [titleSlide(title, primary, accent, style), ...plans.map((p) => slideFromPlan(p, primary, accent, style))];
+  return [titleSlide(title, primary, accent, style, coverImage), ...plans.map((p) => slideFromPlan(p, primary, accent, style))];
 }
 
 /** A brand-new blank slide, for DeckEditor.tsx's "+ Add slide" - just enough to not be
