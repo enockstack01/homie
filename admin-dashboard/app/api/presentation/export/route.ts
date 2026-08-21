@@ -8,6 +8,10 @@ interface ExportRequest {
   title?: string;
   slides?: Slide[];
   content?: FlyerContent;
+  /** A print-format page size (see printFormats.ts) for documents like the wedding
+   * invitation suite that aren't the normal 16:9 deck - undefined falls back to that
+   * default inside renderDeck. */
+  layout?: { widthIn: number; heightIn: number };
 }
 
 function errorResponse(status: number, detail: string): Response {
@@ -44,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
         return errorResponse(400, "Every slide needs at least one element.");
       }
     }
-    buffer = await renderDeck(body.slides, title);
+    buffer = await renderDeck(body.slides, title, body.layout);
   }
 
   const fileName = `${title.replace(/[^a-z0-9 _-]/gi, "").trim() || "deck"}.pptx`;

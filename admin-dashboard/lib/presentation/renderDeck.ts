@@ -13,10 +13,14 @@ const PPTX_SHAPE_TYPE: Record<string, string> = Object.fromEntries(SHAPE_KINDS.m
 // positions in inches directly off each element, so nothing here can drift from what the
 // editor shows.
 
-export async function renderDeck(slides: Slide[], title: string): Promise<Buffer> {
+/** `pageSize` defaults to the normal 16:9 deck layout - pass a print-format size (see
+ * lib/presentation/printFormats.ts) to render a portrait card instead, for the wedding
+ * invitation suite. Every element position is already just inches, with no inherent
+ * landscape assumption, so this is the only thing that needed to change here. */
+export async function renderDeck(slides: Slide[], title: string, pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): Promise<Buffer> {
   const pres = new PptxGenJS();
-  pres.defineLayout({ name: "HOMIE_16X9", width: DECK_LAYOUT.widthIn, height: DECK_LAYOUT.heightIn });
-  pres.layout = "HOMIE_16X9";
+  pres.defineLayout({ name: "HOMIE_CUSTOM", width: pageSize.widthIn, height: pageSize.heightIn });
+  pres.layout = "HOMIE_CUSTOM";
   pres.title = title;
 
   for (const slide of slides) {

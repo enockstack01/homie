@@ -23,6 +23,7 @@ export async function GET(request: Request): Promise<Response> {
             ? template.build(PRIMARY, ACCENT)
             : deckFromPlans(template.name, template.slides, PRIMARY, ACCENT, TEMPLATE_STYLES[template.id], template.coverImage),
           template.name,
+          "layout" in template ? template.layout : undefined,
         )
       : await renderFlyer(template.content, template.name);
 

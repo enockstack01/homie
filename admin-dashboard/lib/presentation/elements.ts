@@ -20,8 +20,46 @@ import {
 // looks identical to the old fixed layout until the user actually moves something.
 
 export type TextAlign = "left" | "center" | "right";
-export const FONT_FAMILIES = ["Arial", "Georgia", "Verdana", "Times New Roman", "Trebuchet MS", "Courier New"] as const;
+export const FONT_FAMILIES = [
+  "Arial",
+  "Georgia",
+  "Verdana",
+  "Times New Roman",
+  "Trebuchet MS",
+  "Courier New",
+  "Cambria",
+  "Constantia",
+  "Garamond",
+  "Book Antiqua",
+  "Century Gothic",
+  "Franklin Gothic Medium",
+  "Segoe UI",
+  "Calibri",
+  "Monotype Corsiva",
+  "Bahnschrift",
+] as const;
 export type FontFamily = (typeof FONT_FAMILIES)[number];
+
+/** Named heading+body font pairings (Section 3.C's "typography is a system, not a
+ * default") - every font referenced here comes preinstalled with Windows/Office, since
+ * this app has no way to license or embed a custom font file into an exported .pptx;
+ * that constraint is exactly why these are the specific fonts picked, not a Google Fonts
+ * wishlist that would silently fall back to a default on most viewers' machines. */
+export interface FontPairing {
+  id: string;
+  name: string;
+  heading: FontFamily;
+  body: FontFamily;
+}
+
+export const FONT_PAIRINGS: FontPairing[] = [
+  { id: "editorial-serif", name: "Editorial Serif", heading: "Cambria", body: "Georgia" },
+  { id: "modern-grotesk", name: "Modern Grotesk", heading: "Century Gothic", body: "Calibri" },
+  { id: "elegant-script", name: "Elegant Script", heading: "Monotype Corsiva", body: "Book Antiqua" },
+  { id: "bold-display", name: "Bold Display", heading: "Franklin Gothic Medium", body: "Trebuchet MS" },
+  { id: "classic-serif", name: "Classic Serif", heading: "Garamond", body: "Constantia" },
+  { id: "clean-sans", name: "Clean Sans", heading: "Segoe UI", body: "Verdana" },
+];
 
 /** Curated PowerPoint/Canva "basic shapes" - `pptx` is the exact PptxGenJS ShapeType key
  * (lib/presentation/renderDeck.ts looks it up directly, `pres.ShapeType[pptx]`), `clip`
@@ -388,8 +426,12 @@ export function deckFromPlans(
 }
 
 /** A brand-new blank slide, for DeckEditor.tsx's "+ Add slide" - just enough to not be
- * empty (one title-role text box) so it isn't a totally inert page. */
-export function blankSlide(): Slide {
+ * empty (one title-role text box) so it isn't a totally inert page. `pageSize` defaults
+ * to the normal 16:9 deck - pass a print-format size (see printFormats.ts) so a new page
+ * added to an invitation-sized document gets a sensibly-placed title instead of one
+ * calibrated for the much wider landscape canvas. */
+export function blankSlide(pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): Slide {
+  const wIn = Math.min(DECK_SLIDE_TITLE_BOX.wIn, pageSize.widthIn - DECK_SLIDE_TITLE_BOX.xIn * 2);
   return {
     id: newId(),
     background: "FFFFFF",
@@ -401,7 +443,7 @@ export function blankSlide(): Slide {
         text: "New slide",
         xIn: DECK_SLIDE_TITLE_BOX.xIn,
         yIn: DECK_SLIDE_TITLE_BOX.yIn,
-        wIn: DECK_SLIDE_TITLE_BOX.wIn,
+        wIn,
         hIn: DECK_SLIDE_TITLE_BOX.hIn,
         fontSize: DECK_SLIDE_TITLE_BOX.fontSize,
         color: PRIMARY,
@@ -425,36 +467,47 @@ export function duplicateElement(el: SlideElement): SlideElement {
 
 /** A freeform text box the user inserts via DeckEditor.tsx's "+ Text" button - deliberately
  * has no `role`, so AI rewrite (which only touches role-tagged elements) never touches it. */
-export function newTextBox(): TextElement {
+/** Every `newX()` factory below takes an optional `pageSize`, defaulting to the normal
+ * 16:9 deck - DeckEditor.tsx passes the open document's actual layout (see
+ * printFormats.ts) so a freshly-inserted text box, shape, table, chart, or image lands
+ * centered and sensibly sized on whatever canvas is actually open, rather than always
+ * assuming the 10x5.63in landscape deck (which would place things off-canvas, or
+ * oddly-tiny/huge, on a 5.25x7.25in portrait invitation). */
+export function newTextBox(pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): TextElement {
+  const wIn = Math.min(4, pageSize.widthIn - 1);
   return {
     id: newId(),
     type: "text",
     text: "New text",
-    xIn: 3,
-    yIn: 2.3,
-    wIn: 4,
+    xIn: (pageSize.widthIn - wIn) / 2,
+    yIn: pageSize.heightIn / 2 - 0.5,
+    wIn,
     hIn: 1,
     fontSize: 20,
     color: TEXT_DARK,
   };
 }
 
-export function newShape(): ShapeElement {
-  return newShapeOfKind("rect");
+export function newShape(pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): ShapeElement {
+  return newShapeOfKind("rect", pageSize);
 }
 
 /** Inserts one of SHAPE_KINDS - DeckEditor.tsx's Insert-tab shape picker (a Canva/
  * PowerPoint "basic shapes" gallery, not just a single rectangle button). Lines get a
  * thin default box since a 3x2in line reads as an oversized diagonal rather than a
  * divider. */
-export function newShapeOfKind(kind: ShapeKind): ShapeElement {
+export function newShapeOfKind(kind: ShapeKind, pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): ShapeElement {
+  const wIn = Math.min(3, pageSize.widthIn - 1);
+  const xIn = (pageSize.widthIn - wIn) / 2;
+  const yIn = pageSize.heightIn / 2 - 1;
   if (kind === "line") {
-    return { id: newId(), type: "shape", shape: kind, fill: ACCENT, xIn: 3, yIn: 3, wIn: 4, hIn: 0.02 };
+    return { id: newId(), type: "shape", shape: kind, fill: ACCENT, xIn, yIn: pageSize.heightIn / 2, wIn: Math.min(4, pageSize.widthIn - 1), hIn: 0.02 };
   }
-  return { id: newId(), type: "shape", shape: kind, fill: ACCENT, xIn: 3.5, yIn: 2, wIn: 3, hIn: 2 };
+  return { id: newId(), type: "shape", shape: kind, fill: ACCENT, xIn, yIn, wIn, hIn: 2 };
 }
 
-export function newTable(): TableElement {
+export function newTable(pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): TableElement {
+  const wIn = Math.min(7, pageSize.widthIn - 1);
   return {
     id: newId(),
     type: "table",
@@ -464,14 +517,15 @@ export function newTable(): TableElement {
       ["", "", ""],
       ["", "", ""],
     ],
-    xIn: 1.5,
-    yIn: 1.8,
-    wIn: 7,
+    xIn: (pageSize.widthIn - wIn) / 2,
+    yIn: pageSize.heightIn / 2 - 1,
+    wIn,
     hIn: 2,
   };
 }
 
-export function newChart(chartKind: ChartKind = "bar"): ChartElement {
+export function newChart(chartKind: ChartKind = "bar", pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT): ChartElement {
+  const wIn = Math.min(7, pageSize.widthIn - 1);
   return {
     id: newId(),
     type: "chart",
@@ -479,18 +533,23 @@ export function newChart(chartKind: ChartKind = "bar"): ChartElement {
     labels: ["Q1", "Q2", "Q3", "Q4"],
     values: [10, 22, 18, 30],
     color: PRIMARY,
-    xIn: 1.5,
-    yIn: 1.5,
-    wIn: 7,
+    xIn: (pageSize.widthIn - wIn) / 2,
+    yIn: pageSize.heightIn / 2 - 1.5,
+    wIn,
     hIn: 3,
   };
 }
 
 /** Sizes a new image element to fit within a max box while preserving its real aspect
  * ratio, rather than stretching every upload into a fixed square. */
-export function newImage(dataUrl: string, naturalWidth: number, naturalHeight: number): ImageElement {
-  const maxWIn = 5;
-  const maxHIn = 3.5;
+export function newImage(
+  dataUrl: string,
+  naturalWidth: number,
+  naturalHeight: number,
+  pageSize: { widthIn: number; heightIn: number } = DECK_LAYOUT,
+): ImageElement {
+  const maxWIn = Math.min(5, pageSize.widthIn - 1);
+  const maxHIn = Math.min(3.5, pageSize.heightIn - 1);
   const aspect = naturalWidth / naturalHeight || 1;
   let wIn = maxWIn;
   let hIn = wIn / aspect;
@@ -502,8 +561,8 @@ export function newImage(dataUrl: string, naturalWidth: number, naturalHeight: n
     id: newId(),
     type: "image",
     dataUrl,
-    xIn: (DECK_LAYOUT.widthIn - wIn) / 2,
-    yIn: (DECK_LAYOUT.heightIn - hIn) / 2,
+    xIn: (pageSize.widthIn - wIn) / 2,
+    yIn: (pageSize.heightIn - hIn) / 2,
     wIn,
     hIn,
   };

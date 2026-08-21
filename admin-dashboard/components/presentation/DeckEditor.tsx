@@ -24,11 +24,11 @@ import {
   extractPlanFromSlide,
   applyPlanToSlide,
 } from "@/lib/presentation/elements";
-import { DECK_LAYOUT } from "@/lib/presentation/layout";
+import { DECK_LAYOUT, PX_PER_INCH } from "@/lib/presentation/layout";
 import { removeBackground } from "@/lib/presentation/imageTools";
 import { Button } from "@/components/ui/Button";
 import { AiRewriteControl } from "./AiRewriteControl";
-import { SlideCanvas, shapeStyle, DECK_CANVAS_WIDTH, DECK_CANVAS_HEIGHT } from "./SlideCanvas";
+import { SlideCanvas, shapeStyle } from "./SlideCanvas";
 
 const THUMB_SCALE = 0.16;
 const TEXT_SWATCHES = ["101914", "005C3D", "F8B712", "FFFFFF", "DC2626", "1D4ED8"];
@@ -43,7 +43,19 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-function Thumbnail({ slide, selected, onClick }: { slide: Slide; selected: boolean; onClick: () => void }) {
+function Thumbnail({
+  slide,
+  selected,
+  onClick,
+  canvasWidth,
+  canvasHeight,
+}: {
+  slide: Slide;
+  selected: boolean;
+  onClick: () => void;
+  canvasWidth: number;
+  canvasHeight: number;
+}) {
   return (
     <button
       type="button"
@@ -51,17 +63,17 @@ function Thumbnail({ slide, selected, onClick }: { slide: Slide; selected: boole
       className={`shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
         selected ? "border-primary" : "border-transparent hover:border-border"
       }`}
-      style={{ width: DECK_CANVAS_WIDTH * THUMB_SCALE, height: DECK_CANVAS_HEIGHT * THUMB_SCALE }}
+      style={{ width: canvasWidth * THUMB_SCALE, height: canvasHeight * THUMB_SCALE }}
     >
       <div
         style={{
-          width: DECK_CANVAS_WIDTH,
-          height: DECK_CANVAS_HEIGHT,
+          width: canvasWidth,
+          height: canvasHeight,
           transform: `scale(${THUMB_SCALE})`,
           transformOrigin: "top left",
         }}
       >
-        <SlideCanvas slide={slide} editable={false} />
+        <SlideCanvas slide={slide} editable={false} width={canvasWidth} height={canvasHeight} />
       </div>
     </button>
   );
@@ -75,6 +87,12 @@ interface Props {
   slides: Slide[];
   onChange: (slides: Slide[]) => void;
   sourceText: string;
+  /** Defaults to the normal 16:9 deck size - pass a print-format size (see
+   * lib/presentation/printFormats.ts) to edit a portrait card instead, for the wedding
+   * invitation suite. Threaded through every place this component previously assumed
+   * DECK_CANVAS_WIDTH/HEIGHT: thumbnails, the main canvas, and the PDF export's page size
+   * and orientation. */
+  layout?: { widthIn: number; heightIn: number };
 }
 
 /** Canva-style freeform editor for the "deck" format: a left rail of live slide
@@ -86,7 +104,10 @@ interface Props {
  * role-tagged title/body elements (lib/presentation/elements.ts's
  * extractPlanFromSlide/applyPlanToSlide), leaving any freeform elements the user added
  * untouched. */
-export function DeckEditor({ slides, onChange, sourceText }: Props) {
+export function DeckEditor({ slides, onChange, sourceText, layout = DECK_LAYOUT }: Props) {
+  const canvasWidth = layout.widthIn * PX_PER_INCH;
+  const canvasHeight = layout.heightIn * PX_PER_INCH;
+  const isPortrait = layout.heightIn > layout.widthIn;
   const [selectedSlide, setSelectedSlide] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
@@ -218,7 +239,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
   }
 
   function addSlide() {
-    commit([...slides, blankSlide()]);
+    commit([...slides, blankSlide(layout)]);
     setSelectedSlide(slides.length);
     setSelectedElementId(null);
   }
@@ -251,7 +272,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const img = new Image();
-      img.onload = () => addElement(newImage(dataUrl, img.naturalWidth, img.naturalHeight));
+      img.onload = () => addElement(newImage(dataUrl, img.naturalWidth, img.naturalHeight, layout));
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
@@ -310,12 +331,13 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
     setExportBusy("pdf");
     try {
       const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "in", format: [DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn] });
+      const orientation = isPortrait ? "portrait" : "landscape";
+      const pdf = new jsPDF({ orientation, unit: "in", format: [layout.widthIn, layout.heightIn] });
       for (let i = 0; i < slides.length; i++) {
         const canvas = await captureSlide(slides[i].id);
         if (!canvas) continue;
-        if (i > 0) pdf.addPage([DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn], "landscape");
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, DECK_LAYOUT.widthIn, DECK_LAYOUT.heightIn);
+        if (i > 0) pdf.addPage([layout.widthIn, layout.heightIn], orientation);
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, layout.widthIn, layout.heightIn);
       }
       pdf.save("deck.pdf");
     } catch (err) {
@@ -329,7 +351,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
     const text = window.prompt("URL or text for the QR code:");
     if (!text?.trim()) return;
     const dataUrl = await QRCode.toDataURL(text.trim(), { width: 480, margin: 1 });
-    addElement({ ...newImage(dataUrl, 1, 1), wIn: 1.6, hIn: 1.6 });
+    addElement({ ...newImage(dataUrl, 1, 1, layout), wIn: 1.6, hIn: 1.6 });
   }
 
   function addTableRow(el: TableElement) {
@@ -385,6 +407,8 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
             <Thumbnail
               slide={s}
               selected={selectedSlide === i}
+              canvasWidth={canvasWidth}
+              canvasHeight={canvasHeight}
               onClick={() => {
                 setSelectedSlide(i);
                 setSelectedElementId(null);
@@ -475,7 +499,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
 
           {activeTab === "insert" && (
             <div className="flex flex-wrap items-start gap-1.5">
-              <Button variant="secondary" size="sm" onClick={() => addElement(newTextBox())}>
+              <Button variant="secondary" size="sm" onClick={() => addElement(newTextBox(layout))}>
                 + Text box
               </Button>
               <div className="relative">
@@ -489,7 +513,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                         key={kind.id}
                         type="button"
                         title={kind.label}
-                        onClick={() => addElement(newShapeOfKind(kind.id))}
+                        onClick={() => addElement(newShapeOfKind(kind.id, layout))}
                         className="flex h-9 w-9 items-center justify-center rounded border border-border hover:border-primary"
                       >
                         <span
@@ -500,10 +524,10 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
                   </div>
                 )}
               </div>
-              <Button variant="secondary" size="sm" onClick={() => addElement(newTable())}>
+              <Button variant="secondary" size="sm" onClick={() => addElement(newTable(layout))}>
                 + Table
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => addElement(newChart("bar"))}>
+              <Button variant="secondary" size="sm" onClick={() => addElement(newChart("bar", layout))}>
                 + Chart
               </Button>
               <Button variant="secondary" size="sm" onClick={() => imageInputRef.current?.click()}>
@@ -855,6 +879,8 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
             <SlideCanvas
               slide={slide}
               editable
+              width={canvasWidth}
+              height={canvasHeight}
               selectedId={selectedElementId}
               editingId={editingElementId}
               onSelect={selectElement}
@@ -892,7 +918,7 @@ export function DeckEditor({ slides, onChange, sourceText }: Props) {
               else exportNodesRef.current.delete(s.id);
             }}
           >
-            <SlideCanvas slide={s} editable={false} />
+            <SlideCanvas slide={s} editable={false} width={canvasWidth} height={canvasHeight} />
           </div>
         ))}
       </div>

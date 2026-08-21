@@ -25,6 +25,99 @@ export const DECK_THEMES = [
   { id: "slate", name: "Slate", primary: "334155", accent: "E2E8F0" },
 ] as const;
 
+/** Full 5-token palettes (primary/secondary/accent/neutral/background), each hand-picked
+ * and contrast-checked as a set - not a color-wheel generator. DECK_THEMES above (just
+ * primary+accent) is what the existing simple/AI-generated decks already use everywhere;
+ * this is the richer system the gold-standard rebuilds (lib/presentation/designedTemplates.ts,
+ * lib/presentation/invitations.ts) draw from instead, without having to migrate every
+ * existing template's call sites to a wider signature. `text`/`textOnPrimary` are the
+ * body-copy colors already verified to read clearly on `background`/`primary`
+ * respectively. */
+export interface Palette {
+  id: string;
+  name: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+  neutral: string;
+  background: string;
+  text: string;
+  textOnPrimary: string;
+}
+
+export const PALETTES: Palette[] = [
+  {
+    id: "editorial-emerald",
+    name: "Editorial Emerald",
+    primary: "0B3D2E",
+    secondary: "1F5C46",
+    accent: "C9A24B",
+    neutral: "EDE7DA",
+    background: "FBF9F4",
+    text: "1C1B18",
+    textOnPrimary: "F6F1E4",
+  },
+  {
+    id: "midnight-azure",
+    name: "Midnight Azure",
+    primary: "0F172A",
+    secondary: "1E3A5F",
+    accent: "38BDF8",
+    neutral: "E2E8F0",
+    background: "F8FAFC",
+    text: "0F172A",
+    textOnPrimary: "F1F5F9",
+  },
+  {
+    id: "terracotta-clay",
+    name: "Terracotta Clay",
+    primary: "7C2D12",
+    secondary: "B45309",
+    accent: "FCD34D",
+    neutral: "FDE9D9",
+    background: "FFFBF5",
+    text: "2A1608",
+    textOnPrimary: "FDF3E7",
+  },
+  {
+    id: "blush-botanical",
+    name: "Blush Botanical",
+    primary: "3F5344",
+    secondary: "7C8F6E",
+    accent: "D8A48F",
+    neutral: "F1E9DE",
+    background: "FBF7F1",
+    text: "2B2A25",
+    textOnPrimary: "F6F1E8",
+  },
+  {
+    id: "ivory-noir",
+    name: "Ivory Noir",
+    primary: "141414",
+    secondary: "3A3A3A",
+    accent: "C6A15B",
+    neutral: "E9E5DC",
+    background: "FAF8F4",
+    text: "141414",
+    textOnPrimary: "F5F0E6",
+  },
+  {
+    id: "berry-orchid",
+    name: "Berry Orchid",
+    primary: "4C1D5B",
+    secondary: "7C3AED",
+    accent: "F472B6",
+    neutral: "F1E6F7",
+    background: "FCFAFD",
+    text: "241026",
+    textOnPrimary: "F6EEFA",
+  },
+];
+
+export function findPalette(id: string): Palette {
+  return PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+}
+
 export interface Box {
   xIn: number;
   yIn: number;

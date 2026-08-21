@@ -3,15 +3,15 @@
 import { useRef, useState, type ReactNode } from "react";
 import { TEMPLATES, type Template, type FlyerContent } from "@/lib/presentation/templates";
 import { type Slide, deckFromPlans, titleSlide, TEMPLATE_STYLES } from "@/lib/presentation/elements";
-import { DECK_THEMES } from "@/lib/presentation/layout";
+import { DECK_THEMES, DECK_LAYOUT, PX_PER_INCH } from "@/lib/presentation/layout";
 import { Button } from "@/components/ui/Button";
 import { DeckEditor } from "@/components/presentation/DeckEditor";
 import { FlyerEditor } from "@/components/presentation/FlyerEditor";
-import { SlideCanvas, DECK_CANVAS_WIDTH, DECK_CANVAS_HEIGHT } from "@/components/presentation/SlideCanvas";
+import { SlideCanvas } from "@/components/presentation/SlideCanvas";
 import { FlyerCanvas, FLYER_CANVAS_WIDTH, FLYER_CANVAS_HEIGHT } from "@/components/presentation/FlyerCanvas";
 
 type EditorState =
-  | { kind: "deck"; title: string; slides: Slide[]; sourceText: string }
+  | { kind: "deck"; title: string; slides: Slide[]; sourceText: string; layout?: { widthIn: number; heightIn: number } }
   | { kind: "flyer"; title: string; content: FlyerContent; sourceText: string };
 
 const inputClass =
@@ -35,14 +35,20 @@ function TemplateThumbnail({ template, primary, accent }: { template: Template; 
   if (template.kind === "deck") {
     // Bespoke-designed templates (lib/presentation/designedTemplates.ts) preview their
     // own real cover slide; the plain SlidePlan[] templates preview the generic
-    // titleSlide/cover-style composition they'll actually open with.
+    // titleSlide/cover-style composition they'll actually open with. A template with its
+    // own print-format `layout` (the wedding invitation suite) previews at that page's
+    // real proportions instead of the normal 16:9 deck box, so the gallery card already
+    // reads as a portrait card, not a landscape slide squeezed into one.
     const cover =
       "build" in template
         ? template.build(primary, accent)[0]
         : titleSlide(template.name, primary, accent, TEMPLATE_STYLES[template.id], template.coverImage);
+    const layout = "layout" in template && template.layout ? template.layout : DECK_LAYOUT;
+    const width = layout.widthIn * PX_PER_INCH;
+    const height = layout.heightIn * PX_PER_INCH;
     return (
-      <ScaledPreview width={DECK_CANVAS_WIDTH} height={DECK_CANVAS_HEIGHT}>
-        <SlideCanvas slide={cover} editable={false} />
+      <ScaledPreview width={width} height={height}>
+        <SlideCanvas slide={cover} editable={false} width={width} height={height} />
       </ScaledPreview>
     );
   }
@@ -108,6 +114,7 @@ export function PresentationStudio() {
                 ? t.build(theme.primary, theme.accent)
                 : deckFromPlans(t.name, t.slides, theme.primary, theme.accent, TEMPLATE_STYLES[t.id], t.coverImage),
             sourceText: "",
+            layout: "layout" in t ? t.layout : undefined,
           }
         : { kind: "flyer", title: t.name, content: t.content, sourceText: "" },
     );
@@ -159,7 +166,7 @@ export function PresentationStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           editing.kind === "deck"
-            ? { kind: "deck", title: editing.title, slides: editing.slides }
+            ? { kind: "deck", title: editing.title, slides: editing.slides, layout: editing.layout }
             : { kind: "flyer", title: editing.title, content: editing.content },
         ),
       });
@@ -198,7 +205,12 @@ export function PresentationStudio() {
         </div>
 
         {editing.kind === "deck" ? (
-          <DeckEditor slides={editing.slides} sourceText={editing.sourceText} onChange={(slides) => setEditing({ ...editing, slides })} />
+          <DeckEditor
+            slides={editing.slides}
+            sourceText={editing.sourceText}
+            layout={editing.layout}
+            onChange={(slides) => setEditing({ ...editing, slides })}
+          />
         ) : (
           <FlyerEditor
             content={editing.content}

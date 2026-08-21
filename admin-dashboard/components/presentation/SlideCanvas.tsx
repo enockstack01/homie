@@ -373,14 +373,14 @@ function EditableElement({ el, selectedId, editingId, onSelect, onStartEditing, 
  * all three read from the same Slide/SlideElement data. */
 export function SlideCanvas(
   props:
-    | { slide: Slide; editable: false }
-    | ({ slide: Slide; editable: true } & EditableProps),
+    | { slide: Slide; editable: false; width?: number; height?: number }
+    | ({ slide: Slide; editable: true; width?: number; height?: number } & EditableProps),
 ) {
-  const { slide } = props;
+  const { slide, width = DECK_CANVAS_WIDTH, height = DECK_CANVAS_HEIGHT } = props;
 
   if (!props.editable) {
     return (
-      <div className="relative" style={{ width: DECK_CANVAS_WIDTH, height: DECK_CANVAS_HEIGHT, backgroundColor: `#${slide.background}` }}>
+      <div className="relative" style={{ width, height, backgroundColor: `#${slide.background}` }}>
         {slide.elements.map((el) => (
           <StaticElement key={el.id} el={el} />
         ))}
@@ -393,7 +393,7 @@ export function SlideCanvas(
   return (
     <div
       className="relative"
-      style={{ width: DECK_CANVAS_WIDTH, height: DECK_CANVAS_HEIGHT, backgroundColor: `#${slide.background}` }}
+      style={{ width, height, backgroundColor: `#${slide.background}` }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
           onSelect(null);

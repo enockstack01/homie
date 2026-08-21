@@ -1,6 +1,7 @@
 import type { SlidePlan } from "./outline";
 import type { Slide } from "./elements";
-import { pitchDeckModern, marketingReport, caseStudy, minimalist } from "./designedTemplates";
+import { pitchDeckModern, pitchDeckClassic, marketingReport, caseStudy, minimalist } from "./designedTemplates";
+import { weddingInvitationClassic, WEDDING_INVITATION_LAYOUT } from "./invitations";
 import { SAMPLE_IMAGES } from "./assets";
 
 /**
@@ -12,6 +13,12 @@ import { SAMPLE_IMAGES } from "./assets";
  * the same deterministic renderDeck.ts/renderFlyer.ts the AI path uses. That's deliberate
  * - a template should download instantly, work with no API key, and never cost credits,
  * the same way picking a Canva template does.
+ *
+ * Every template's copy is written as a specific, real-sounding scenario (a named
+ * company, person, address, or event) rather than bracketed placeholders like
+ * "[Founder Name]" - the default preview should already read as a finished document, not
+ * a form. Editing replaces good content with the user's own, it never fills an obvious
+ * blank for the first time.
  */
 
 export interface FlyerContent {
@@ -28,7 +35,17 @@ export interface FlyerContent {
 
 export type Template =
   | { id: string; kind: "deck"; name: string; description: string; slides: SlidePlan[]; coverImage?: string }
-  | { id: string; kind: "deck"; name: string; description: string; build: (primary: string, accent: string) => Slide[] }
+  | {
+      id: string;
+      kind: "deck";
+      name: string;
+      description: string;
+      build: (primary: string, accent: string) => Slide[];
+      /** Overrides the normal 16:9 deck canvas - a real print-format page size (see
+       * printFormats.ts), for documents like the wedding invitation suite that are pages
+       * meant to be printed at an exact trim size, not slides meant to be presented. */
+      layout?: { widthIn: number; heightIn: number };
+    }
   | { id: string; kind: "flyer"; name: string; description: string; content: FlyerContent };
 
 export const TEMPLATES: Template[] = [
@@ -38,21 +55,33 @@ export const TEMPLATES: Template[] = [
     name: "Business Pitch",
     description: "Cover, problem, solution, market, team, the ask.",
     slides: [
-      { title: "Company Name", bullets: ["One-line description of what you do", "Presented by [Your Name]"] },
+      { title: "Harborline Logistics", bullets: ["Real-time freight visibility for mid-size shippers", "Presented by Dana Whitfield, Founder & CEO"] },
       {
         title: "The Problem",
-        bullets: ["What's broken today", "Who feels this pain, and how often", "Why existing options fall short"],
+        bullets: [
+          "Mid-size shippers lose an average of 6 hours a week tracking freight across five different carrier portals",
+          "Late-delivery penalties cost the average shipper $180K a year",
+          "Enterprise tracking platforms start at $50K/year - out of reach for this segment",
+        ],
       },
       {
         title: "Our Solution",
-        bullets: ["What you built", "Why it's different", "The core value in one sentence"],
+        bullets: [
+          "One dashboard that pulls live status from 40+ carriers automatically",
+          "Delay alerts land 6-12 hours before the carrier's own notification",
+          "Setup takes under a day, no EDI integration required",
+        ],
       },
       {
         title: "Market Opportunity",
-        bullets: ["Total addressable market size", "Who your first customers are", "Why now"],
+        bullets: [
+          "$4.8B market: 28,000 US shippers moving 50-500 loads a month",
+          "First customers: regional produce and building-materials distributors",
+          "Freight visibility spend is growing 22% a year as shippers absorb more carrier risk",
+        ],
       },
-      { title: "Team", bullets: ["Founder backgrounds", "Relevant experience", "Why this team wins"] },
-      { title: "The Ask", bullets: ["How much you're raising", "What it funds", "Milestones it unlocks"] },
+      { title: "Team", bullets: ["Dana Whitfield - 9 years at C.H. Robinson, led carrier ops", "Marcus Ilori - ex-Flexport engineering lead", "Priya Nair - advisor, 3 prior logistics-tech exits"] },
+      { title: "The Ask", bullets: ["Raising $2.5M seed", "18 months of runway to reach 200 paying shippers", "Unlocks: full-time sales team, SOC 2 certification"] },
     ],
     coverImage: SAMPLE_IMAGES.officeBoardroom,
   },
@@ -62,6 +91,13 @@ export const TEMPLATES: Template[] = [
     name: "Pitch Deck (Modern)",
     description: "Bold typography, bento-grid stats, one big number per slide - 2026's investor-deck look.",
     build: pitchDeckModern,
+  },
+  {
+    id: "pitch-deck-classic",
+    kind: "deck",
+    name: "Pitch Deck (Classic)",
+    description: "Editorial serif typography, framed portrait grid, understated - a different visual direction from Modern's bento grid.",
+    build: pitchDeckClassic,
   },
   {
     id: "marketing-report",
@@ -74,8 +110,16 @@ export const TEMPLATES: Template[] = [
     id: "case-study",
     kind: "deck",
     name: "Case Study",
-    description: "Photo-placeholder cover, challenge/solution split, results, gallery.",
+    description: "Real photography cover, challenge/solution split, results, gallery.",
     build: caseStudy,
+  },
+  {
+    id: "wedding-invitation-classic",
+    kind: "deck",
+    name: "Wedding Invitation (Classic)",
+    description: "A coordinated 3-piece suite - invitation, RSVP card, and details card - at true 5\"x7\" print size with bleed, formal serif and script typography, and a hand-inked frame.",
+    build: () => weddingInvitationClassic(),
+    layout: WEDDING_INVITATION_LAYOUT,
   },
   {
     id: "minimalist",
@@ -90,20 +134,28 @@ export const TEMPLATES: Template[] = [
     name: "Project Status Report",
     description: "Cover, summary, progress, risks, next steps.",
     slides: [
-      { title: "Project Status Report", bullets: ["[Project name]", "Reporting period: [date range]"] },
+      { title: "Atlas CRM Migration", bullets: ["Status report - reporting period: March 1-31"] },
       {
         title: "Executive Summary",
-        bullets: ["Overall status: on track / at risk / delayed", "Headline outcome this period", "One thing leadership should know"],
+        bullets: [
+          "Overall status: on track for the April 18 cutover",
+          "Sales team pilot completed with a 94% satisfaction score",
+          "Leadership decision needed on the legacy-data retention window by April 5",
+        ],
       },
       {
         title: "Progress This Period",
-        bullets: ["Milestone 1 - status", "Milestone 2 - status", "Milestone 3 - status"],
+        bullets: ["Contact and deal-history migration - complete", "Custom field mapping (140 fields) - complete", "Sales team training (3 of 4 sessions) - in progress"],
       },
       {
         title: "Risks & Blockers",
-        bullets: ["Risk 1 - impact and mitigation", "Risk 2 - impact and mitigation", "Decisions needed from leadership"],
+        bullets: [
+          "Salesforce API rate limits are slowing the final data sync - mitigated by running it overnight",
+          "Two integrations (Marketo, Gong) still need re-authentication after cutover",
+          "Decision needed: keep the old CRM read-only for 90 days, or export and retire it immediately",
+        ],
       },
-      { title: "Next Steps", bullets: ["Priority for next period", "Owner and target date", "Support needed"] },
+      { title: "Next Steps", bullets: ["Finish sales training - owner: Priya Rao, target April 8", "Run the final data sync rehearsal - owner: Tomas Berg, target April 12", "Go-live cutover - April 18, 6pm"] },
     ],
     coverImage: SAMPLE_IMAGES.citySkyline,
   },
@@ -113,11 +165,11 @@ export const TEMPLATES: Template[] = [
     name: "Team Update",
     description: "Cover, highlights, metrics, blockers, thanks.",
     slides: [
-      { title: "Team Update", bullets: ["[Team name]", "[Date]"] },
-      { title: "Highlights", bullets: ["Win #1", "Win #2", "Win #3"] },
-      { title: "Key Metrics", bullets: ["Metric 1: value, trend", "Metric 2: value, trend", "Metric 3: value, trend"] },
-      { title: "Blockers", bullets: ["What's slowing us down", "What we need to unblock it"] },
-      { title: "Thank You", bullets: ["Shoutouts", "Questions?"] },
+      { title: "Product Design Team", bullets: ["Weekly update - week of March 24"] },
+      { title: "Highlights", bullets: ["Shipped the new onboarding flow - early signup completion up 15%", "Design system component library hit 80 components", "Wrapped user interviews for the mobile redesign"] },
+      { title: "Key Metrics", bullets: ["Onboarding completion: 68%, up from 53% last month", "Support tickets tagged 'confusing UI': 12, down from 31", "Design review turnaround: 1.4 days, down from 2.6"] },
+      { title: "Blockers", bullets: ["Waiting on brand guideline sign-off from marketing to finalize the color system", "Need one more mobile engineer to keep pace with the redesign backlog"] },
+      { title: "Thank You", bullets: ["Shoutout to Elena for carrying the onboarding project solo through the holidays", "Questions? Drop them in #product-design"] },
     ],
     coverImage: SAMPLE_IMAGES.workspaceLaptop,
   },
@@ -127,11 +179,11 @@ export const TEMPLATES: Template[] = [
     name: "Product Launch",
     description: "Cover, problem, product, features, roadmap.",
     slides: [
-      { title: "Introducing [Product Name]", bullets: ["Launch date: [date]"] },
-      { title: "The Problem", bullets: ["What customers struggle with today"] },
-      { title: "The Product", bullets: ["What it is", "Who it's for"] },
-      { title: "Key Features", bullets: ["Feature 1", "Feature 2", "Feature 3"] },
-      { title: "What's Next", bullets: ["Roadmap highlights", "How to get access"] },
+      { title: "Introducing Aurora", bullets: ["Launching May 6"] },
+      { title: "The Problem", bullets: ["Knowledge workers spend 2.5 hours a day rewriting the same emails, briefs, and updates in a slightly different voice each time"] },
+      { title: "The Product", bullets: ["Aurora learns your writing voice from 10 past documents", "Drafts emails, briefs, and updates that already sound like you", "Built for teams who write for a living - support, sales, and marketing"] },
+      { title: "Key Features", bullets: ["Voice matching from your own past writing", "One-click tone shift: formal, friendly, concise", "Works inside Gmail, Docs, and Slack"] },
+      { title: "What's Next", bullets: ["Team voice-sharing rolls out in Q3", "Early access is open now at aurora.app/early-access"] },
     ],
     coverImage: SAMPLE_IMAGES.citySkyline,
   },
@@ -141,12 +193,12 @@ export const TEMPLATES: Template[] = [
     name: "Educational Lesson",
     description: "Cover, objectives, content, recap, questions.",
     slides: [
-      { title: "[Lesson Title]", bullets: ["[Course / class name]"] },
-      { title: "Learning Objectives", bullets: ["By the end, you'll be able to...", "Objective 2", "Objective 3"] },
-      { title: "Key Concept 1", bullets: ["Explanation", "Example"] },
-      { title: "Key Concept 2", bullets: ["Explanation", "Example"] },
-      { title: "Recap", bullets: ["Summary of what we covered", "How it connects to next time"] },
-      { title: "Questions?", bullets: ["Let's discuss"] },
+      { title: "Introduction to Photosynthesis", bullets: ["Grade 7 Science - Ms. Alvarado"] },
+      { title: "Learning Objectives", bullets: ["Explain what photosynthesis converts, and into what", "Identify the role of chlorophyll and sunlight", "Describe why photosynthesis matters for every food chain"] },
+      { title: "Key Concept 1: Inputs and Outputs", bullets: ["Plants take in carbon dioxide and water", "Sunlight provides the energy for the reaction", "Output: glucose (food) and oxygen"] },
+      { title: "Key Concept 2: Where It Happens", bullets: ["Photosynthesis happens inside chloroplasts", "Chlorophyll is what makes leaves green - and what captures sunlight", "Most photosynthesis happens in the leaves, not the stem or roots"] },
+      { title: "Recap", bullets: ["Photosynthesis turns sunlight, water, and CO2 into food and oxygen", "Next class: how animals depend on this process"] },
+      { title: "Questions?", bullets: ["Let's discuss - what would happen to Earth's oxygen if plants disappeared?"] },
     ],
     coverImage: SAMPLE_IMAGES.classroomChalkboard,
   },
@@ -164,10 +216,10 @@ export const TEMPLATES: Template[] = [
     description: "Headline, date/time/location, description, call to action.",
     content: {
       headline: "You're Invited",
-      subheadline: "[Event Name]",
-      body: ["[Date] at [Time]", "[Venue / Location]", "[Short description of what to expect]"],
-      cta: "RSVP at [link or contact]",
-      footer: "[Organizer name]",
+      subheadline: "Riverside Summer Music Festival",
+      body: ["Saturday, July 12 at 4:00 PM", "Riverside Park Amphitheater, 220 Water Street", "Six local bands, food trucks, and a sunset headline set"],
+      cta: "Get tickets at riversidefest.com",
+      footer: "Hosted by the Riverside Arts Council",
       imageUrl: SAMPLE_IMAGES.eventCrowd,
     },
   },
@@ -177,11 +229,11 @@ export const TEMPLATES: Template[] = [
     name: "Promotional Flyer",
     description: "Offer headline, details, call to action.",
     content: {
-      headline: "[Offer Headline]",
-      subheadline: "Limited time only",
-      body: ["[What the offer includes]", "[Any terms or conditions]", "[Why it matters to the customer]"],
-      cta: "[Call to action, e.g. Shop now at ...]",
-      footer: "[Business name / contact info]",
+      headline: "20% Off Your First Order",
+      subheadline: "New customers only, this month",
+      body: ["Applies to any bag of whole-bean or ground coffee", "Use code FIRST20 at checkout", "One use per customer, expires the 30th"],
+      cta: "Shop now at northsideroasters.com",
+      footer: "Northside Coffee Roasters, 118 Elm Street",
     },
   },
   {
@@ -190,11 +242,11 @@ export const TEMPLATES: Template[] = [
     name: "Real Estate Listing",
     description: "A real listing photo, price callout, features, and contact.",
     content: {
-      headline: "[123 Example Street]",
-      subheadline: "$[Price]  ·  [City, State]",
-      body: ["[4] beds  ·  [3] baths  ·  [2,400] sq ft", "[Key feature - updated kitchen, big yard, etc.]", "[Second key feature]"],
-      cta: "Schedule a showing: [phone / email]",
-      footer: "[Agent name]  ·  [Brokerage]  ·  [License #]",
+      headline: "482 Willow Creek Lane",
+      subheadline: "$525,000  ·  Asheville, NC",
+      body: ["4 beds  ·  3 baths  ·  2,640 sq ft", "Fully renovated kitchen with quartz counters", "Half-acre lot backing onto Willow Creek greenway"],
+      cta: "Schedule a showing: (828) 555-0148",
+      footer: "Maria Chen  ·  Blue Ridge Realty  ·  License #294817",
       imageUrl: SAMPLE_IMAGES.realEstateHouse,
     },
   },
@@ -204,11 +256,11 @@ export const TEMPLATES: Template[] = [
     name: "Restaurant Special",
     description: "A plated-dish photo, offer headline, and details.",
     content: {
-      headline: "[Weekend Tasting Menu]",
-      subheadline: "[Restaurant Name]",
-      body: ["[Course one - short description]", "[Course two - short description]", "[Price per person]"],
-      cta: "Reserve at [phone / website]",
-      footer: "[Address]  ·  [Hours]",
+      headline: "Autumn Harvest Tasting Menu",
+      subheadline: "The Copper Fork",
+      body: ["Seared scallops with brown butter squash puree", "Braised short rib, root vegetables, red wine jus", "$68 per person, wine pairing available for $28"],
+      cta: "Reserve at (312) 555-0199 or thecopperfork.com",
+      footer: "412 Lakeshore Drive  ·  Tue-Sun, 5-10pm",
       imageUrl: SAMPLE_IMAGES.restaurantPlating,
     },
   },
@@ -218,9 +270,13 @@ export const TEMPLATES: Template[] = [
     name: "Announcement Flyer",
     description: "Headline, body copy, contact info.",
     content: {
-      headline: "[Announcement Headline]",
-      body: ["[Details of the announcement]", "[Why it matters]", "[What happens next]"],
-      footer: "[Contact name / email / phone]",
+      headline: "We're Moving to a New Location",
+      body: [
+        "Starting April 1, Riverside Design Studio will be at 88 Harbor View, Suite 300",
+        "Same phone number and email, same team",
+        "Open house to celebrate the new space on April 5, 5-8pm - all welcome",
+      ],
+      footer: "Questions? hello@riversidedesignstudio.com  ·  (415) 555-0172",
     },
   },
   {
