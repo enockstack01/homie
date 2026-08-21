@@ -1,7 +1,7 @@
 import type { SlidePlan } from "./outline";
 import type { Slide } from "./elements";
 import { pitchDeckModern, pitchDeckClassic, marketingReport, caseStudy, minimalist } from "./designedTemplates";
-import { weddingInvitationClassic, WEDDING_INVITATION_LAYOUT } from "./invitations";
+import { weddingInvitationClassic, weddingInvitationModern, weddingInvitationBotanical, WEDDING_INVITATION_LAYOUT } from "./invitations";
 import { SAMPLE_IMAGES } from "./assets";
 
 /**
@@ -119,6 +119,22 @@ export const TEMPLATES: Template[] = [
     name: "Wedding Invitation (Classic)",
     description: "A coordinated 3-piece suite - invitation, RSVP card, and details card - at true 5\"x7\" print size with bleed, formal serif and script typography, and a hand-inked frame.",
     build: () => weddingInvitationClassic(),
+    layout: WEDDING_INVITATION_LAYOUT,
+  },
+  {
+    id: "wedding-invitation-modern",
+    kind: "deck",
+    name: "Wedding Invitation (Modern Minimal)",
+    description: "The same true 5\"x7\" print suite, restyled: left-aligned geometric type, one thin rule instead of a frame, and generous whitespace.",
+    build: () => weddingInvitationModern(),
+    layout: WEDDING_INVITATION_LAYOUT,
+  },
+  {
+    id: "wedding-invitation-botanical",
+    kind: "deck",
+    name: "Wedding Invitation (Botanical)",
+    description: "The same true 5\"x7\" print suite, restyled: loose asymmetric greenery corners, script names, and a soft garden palette.",
+    build: () => weddingInvitationBotanical(),
     layout: WEDDING_INVITATION_LAYOUT,
   },
   {
