@@ -14,4 +14,5 @@ export const SAMPLE_IMAGES = {
   workspaceLaptop: "/presentation-assets/workspace-laptop.jpg",
   classroomChalkboard: "/presentation-assets/classroom-chalkboard.jpg",
   eventCrowd: "/presentation-assets/event-crowd.jpg",
+  coffeeBeans: "/presentation-assets/coffee-beans.jpg",
 } as const;

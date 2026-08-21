@@ -15,6 +15,7 @@ None of these are AI-generated or watermarked stock; each was visually checked b
 | `workspace-laptop.jpg` | Laptop + coffee on a desk | stocksnap.io (cc0) |
 | `classroom-chalkboard.jpg` | Empty classroom chalkboard, no people | Flickr (cc0) |
 | `event-crowd.jpg` | Concert/event crowd, silhouetted from behind - no identifiable individuals | stocksnap.io (cc0) |
+| `coffee-beans.jpg` | Overhead shot, a cup filled with coffee beans set into a bed of beans, no people | https://stocksnap.io/photo/coffee-beans-X2JNLNHCT9 (cc0) |
 
 Two candidates found via the same searches were rejected after visual review despite
 matching license/keywords: a posed group photo of real, identifiable people at an

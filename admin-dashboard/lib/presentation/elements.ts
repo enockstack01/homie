@@ -364,26 +364,50 @@ export function titleSlide(
 
 /** One content slide from a {title, bullets} plan - the title and the bullets (joined as
  * one multi-line text box, same as a normal Canva body text box rather than N separate
- * draggable bullet objects) each become one role-tagged TextElement, plus a small corner
- * accent bar so content slides don't look bare next to the decorated cover. */
-export function slideFromPlan(plan: SlidePlan, primary: string = PRIMARY, accent: string = ACCENT, style: CoverStyle = "circles"): Slide {
+ * draggable bullet objects) each become one role-tagged TextElement. Every content slide
+ * also gets a real decorative composition so it doesn't look bare next to the decorated
+ * cover: the left accent bar, a corner glyph sized and positioned to actually read on the
+ * page (the previous version bled ~70% of itself off-canvas), a small secondary accent
+ * dot, and - when `index`/`total` are given - a slide-number chip, the same finishing
+ * detail a real deck always has. `index`/`total` are 1-based/inclusive of the cover, so a
+ * 5-content-slide deck numbers its pages 2/6 through 6/6. */
+export function slideFromPlan(
+  plan: SlidePlan,
+  primary: string = PRIMARY,
+  accent: string = ACCENT,
+  style: CoverStyle = "circles",
+  index?: number,
+  total?: number,
+): Slide {
   const cornerGlyph: ShapeElement = {
     id: newId(),
     type: "shape",
     shape: CORNER_GLYPH[style],
     fill: accent,
-    opacity: 60,
-    xIn: 9.55,
-    yIn: -0.35,
-    wIn: 0.9,
-    hIn: 0.9,
+    opacity: 55,
+    xIn: 8.7,
+    yIn: -0.25,
+    wIn: 1.3,
+    hIn: 1.3,
+  };
+  const cornerDot: ShapeElement = {
+    id: newId(),
+    type: "shape",
+    shape: "ellipse",
+    fill: primary,
+    opacity: 20,
+    xIn: 9.35,
+    yIn: 4.85,
+    wIn: 0.38,
+    hIn: 0.38,
   };
   return {
     id: newId(),
     background: "FFFFFF",
     elements: [
-      { id: newId(), type: "shape", shape: "rect", fill: primary, xIn: 0, yIn: 0, wIn: 0.12, hIn: DECK_LAYOUT.heightIn },
-      ...(style === "none" ? [] : [cornerGlyph]),
+      { id: newId(), type: "shape", shape: "rect", fill: primary, xIn: 0, yIn: 0, wIn: 0.14, hIn: DECK_LAYOUT.heightIn },
+      cornerGlyph,
+      cornerDot,
       {
         id: newId(),
         type: "text",
@@ -410,6 +434,22 @@ export function slideFromPlan(plan: SlidePlan, primary: string = PRIMARY, accent
         fontSize: DECK_BULLETS_BOX.fontSize,
         color: TEXT_DARK,
       },
+      ...(index && total
+        ? [
+            {
+              id: newId(),
+              type: "text" as const,
+              text: `${index} / ${total}`,
+              xIn: 8.9,
+              yIn: 5.28,
+              wIn: 0.9,
+              hIn: 0.3,
+              fontSize: 9,
+              align: "right" as const,
+              color: "9CA3AF",
+            },
+          ]
+        : []),
     ],
   };
 }
@@ -422,7 +462,11 @@ export function deckFromPlans(
   style: CoverStyle = "circles",
   coverImage?: string,
 ): Slide[] {
-  return [titleSlide(title, primary, accent, style, coverImage), ...plans.map((p) => slideFromPlan(p, primary, accent, style))];
+  const total = plans.length + 1;
+  return [
+    titleSlide(title, primary, accent, style, coverImage),
+    ...plans.map((p, i) => slideFromPlan(p, primary, accent, style, i + 2, total)),
+  ];
 }
 
 /** A brand-new blank slide, for DeckEditor.tsx's "+ Add slide" - just enough to not be

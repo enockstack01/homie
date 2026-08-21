@@ -249,6 +249,8 @@ export function pitchDeckClassic(primary: string, accent: string): Slide[] {
   ]);
 
   const ask = slide("FFFFFF", [
+    box({ shape: "ellipse", fill: accent, opacity: 10, xIn: 6.6, yIn: -1.8, wIn: 5, hIn: 5 }),
+    box({ shape: "ellipse", fill: primary, opacity: 6, xIn: -1.6, yIn: 3.2, wIn: 4.2, hIn: 4.2 }),
     box({ shape: "line", fill: primary, xIn: 2.5, yIn: 1.5, wIn: 5, hIn: 0.03 }),
     text({
       role: "title",
@@ -330,6 +332,8 @@ export function marketingReport(primary: string, accent: string): Slide[] {
   };
 
   const quote = slide("FFFFFF", [
+    box({ shape: "ellipse", fill: primary, opacity: 6, xIn: 7.3, yIn: -1.6, wIn: 4.4, hIn: 4.4 }),
+    box({ shape: "ellipse", fill: accent, opacity: 14, xIn: -1.3, yIn: 3.6, wIn: 3.4, hIn: 3.4 }),
     text({ text: "“", xIn: 0.4, yIn: 0.2, wIn: 3, hIn: 2.2, fontSize: 140, bold: true, color: QUOTE_GLYPH_COLOR }),
     text({
       text: "This is the quarter our retention finally caught up with our growth.",
@@ -342,6 +346,7 @@ export function marketingReport(primary: string, accent: string): Slide[] {
       align: "center",
       color: "101914",
     }),
+    box({ shape: "line", fill: accent, xIn: 4.4, yIn: 3.35, wIn: 1.2, hIn: 0.03 }),
     text({ text: "— Priya Shah, VP Marketing, Lumen Outdoor", xIn: 1.2, yIn: 3.5, wIn: 7.6, hIn: 0.5, fontSize: 14, align: "center", color: primary }),
   ]);
 
@@ -416,7 +421,13 @@ export function caseStudy(primary: string, accent: string): Slide[] {
  * research also called out for 2026: huge type as the entire visual, no shape
  * compositions at all, matching lib/presentation/elements.ts's "none" cover style). */
 export function minimalist(primary: string): Slide[] {
+  // Still "type as the whole design" - every added element here is a single hairline
+  // rule or a very faint numeral/tint, never a photo or a card, so the restraint that
+  // defines this template survives; but a page with literally nothing except black text
+  // on white reads as unfinished rather than deliberate, so every slide gets at least one
+  // quiet mark that isn't body copy.
   const cover = slide("FFFFFF", [
+    box({ shape: "line", fill: primary, xIn: 4.5, yIn: 1.55, wIn: 1, hIn: 0.025 }),
     text({
       role: "title",
       text: "Fewer, better things.",
@@ -434,6 +445,7 @@ export function minimalist(primary: string): Slide[] {
 
   const section = slide("FFFFFF", [
     text({ text: "01", xIn: 0.3, yIn: 0.6, wIn: 5, hIn: 3, fontSize: 200, bold: true, color: FAINT_NUMBER_COLOR }),
+    box({ shape: "line", fill: primary, xIn: 3.6, yIn: 1.85, wIn: 0.5, hIn: 0.03 }),
     text({ role: "title", text: "Why we cut our product line in half", xIn: 3.6, yIn: 2.2, wIn: 5.6, hIn: 0.8, fontSize: 28, bold: true, color: "101914" }),
     text({
       text: "Fewer options sold better - customers spent less time comparing and more time buying.",
@@ -463,6 +475,7 @@ export function minimalist(primary: string): Slide[] {
   ]);
 
   const closing = slide("FFFFFF", [
+    box({ shape: "line", fill: primary, xIn: 4.3, yIn: 1.85, wIn: 1.4, hIn: 0.025 }),
     text({ text: "Thank you.", xIn: 0.8, yIn: 2.1, wIn: 8.4, hIn: 1.3, fontSize: 50, bold: true, align: "center", color: "101914" }),
     text({ text: "hello@fewerbetter.co  ·  fewerbetter.co", xIn: 0.8, yIn: 3.5, wIn: 8.4, hIn: 0.5, fontSize: 13, align: "center", color: "6B7280" }),
   ]);

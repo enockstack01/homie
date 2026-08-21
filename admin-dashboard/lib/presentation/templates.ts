@@ -250,6 +250,7 @@ export const TEMPLATES: Template[] = [
       body: ["Applies to any bag of whole-bean or ground coffee", "Use code FIRST20 at checkout", "One use per customer, expires the 30th"],
       cta: "Shop now at northsideroasters.com",
       footer: "Northside Coffee Roasters, 118 Elm Street",
+      imageUrl: SAMPLE_IMAGES.coffeeBeans,
     },
   },
   {
@@ -293,6 +294,7 @@ export const TEMPLATES: Template[] = [
         "Open house to celebrate the new space on April 5, 5-8pm - all welcome",
       ],
       footer: "Questions? hello@riversidedesignstudio.com  ·  (415) 555-0172",
+      imageUrl: SAMPLE_IMAGES.workspaceLaptop,
     },
   },
   {
